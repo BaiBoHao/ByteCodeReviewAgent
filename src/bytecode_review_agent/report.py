@@ -33,8 +33,10 @@ class MarkdownReporter:
             [
                 "## Traceability",
                 "",
-                "Each finding includes a trace ID. Use `review-agent trace <TRACE_ID>` to inspect ",
-                "the model request, deterministic tool observations and stored response.",
+                (
+                    "Each finding includes a trace ID. Use `review-agent trace <TRACE_ID>` to "
+                    "inspect the model request, deterministic tool observations and stored response."
+                ),
                 "",
             ]
         )

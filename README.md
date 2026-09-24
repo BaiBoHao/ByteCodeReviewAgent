@@ -110,6 +110,15 @@ adapter     registry   adapter
 See [Architecture](docs/architecture.md) and [Threat model](docs/threat-model.md) for the
 state machine, extension boundaries, and security decisions.
 
+## Demonstration
+
+The repository includes an exact CLI-generated [demo review report](examples/demo-review-report.md)
+for the synthetic `ReviewProjectTest` diff. The companion
+[demo instructions](examples/README.md) explain how to reproduce it with a deterministic local
+OpenAI-compatible endpoint. The demo exercises the real pipeline without sending source code or
+credentials to an external service; it demonstrates product behavior rather than external model
+quality.
+
 ## Tool extensions
 
 Built-in tools are pure, non-executing analyzers. Third-party packages may expose a tool through
