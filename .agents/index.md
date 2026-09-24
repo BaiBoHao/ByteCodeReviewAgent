@@ -14,3 +14,4 @@
 
 - [Phase-one backend and CLI](20260924T161445-phase-one-backend-cli.md) - Python review engine, CLI, recovery, trace, budget, security controls, tests, and documentation implemented.
 - [Live GitHub PR validation progress](20260924T170707-github-pr-validation.md) - Fixture repository and PR #1 created; GitHub input, diff parsing, redaction, tools, and tests validated pending real model configuration.
+- [CLI end-to-end and provider success tests](20260924T171407-cli-e2e-tests.md) - Loopback model server validates the real CLI pipeline; GitHub/GitLab success adapters covered; 16 tests pass.

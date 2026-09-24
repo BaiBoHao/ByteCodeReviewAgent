@@ -135,7 +135,9 @@ python -m unittest discover -s tests -v
 
 Tests cover diff parsing, large-hunk chunking, secret redaction, source URL controls, budget
 enforcement, trace linkage, failure checkpoints, and resume behavior. Model calls are replaced
-with a deterministic fake.
+with deterministic fakes. The CLI integration test also starts a loopback OpenAI-compatible HTTP
+server and exercises request formatting, redaction, budget accounting, SQLite state, trace
+inspection, and Markdown reporting end to end.
 
 ## Current boundaries
 
