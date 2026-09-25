@@ -9,7 +9,7 @@ import typer
 
 from bytecode_review_agent import __version__
 from bytecode_review_agent.config import Settings
-from bytecode_review_agent.errors import ReviewAgentError
+from bytecode_review_agent.errors import ConfigurationError, ReviewAgentError
 from bytecode_review_agent.llm import OpenAICompatibleReviewer
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.service import ReviewService
@@ -40,8 +40,9 @@ def _settings(
     input_price: Optional[str],
     output_price: Optional[str],
     allowed_hosts: list[str],
+    env_file: Optional[Path],
 ) -> Settings:
-    settings = Settings.from_env(data_dir=data_dir)
+    settings = Settings.from_env(data_dir=data_dir, env_file=env_file)
     changes: dict[str, object] = {}
     if model:
         changes["llm_model"] = model
@@ -90,6 +91,7 @@ def review(
     input_price: Optional[str] = typer.Option(None, "--input-price", help="CNY per 1M tokens."),
     output_price: Optional[str] = typer.Option(None, "--output-price", help="CNY per 1M tokens."),
     allowed_host: Optional[list[str]] = typer.Option(None, "--allowed-host"),
+    env_file: Optional[Path] = typer.Option(None, "--env-file", help="Local environment file."),
 ) -> None:
     """Start a new review run and write a Markdown report."""
     try:
@@ -100,6 +102,7 @@ def review(
             input_price,
             output_price,
             allowed_host or [],
+            env_file,
         )
         result = _service(settings).start(
             source, budget_cny=_decimal(budget, "budget"), output_path=output
@@ -123,10 +126,19 @@ def resume(
     base_url: Optional[str] = typer.Option(None, "--base-url"),
     input_price: Optional[str] = typer.Option(None, "--input-price"),
     output_price: Optional[str] = typer.Option(None, "--output-price"),
+    env_file: Optional[Path] = typer.Option(None, "--env-file"),
 ) -> None:
     """Resume a failed or budget-exhausted run from its last completed chunk."""
     try:
-        settings = _settings(data_dir, model, base_url, input_price, output_price, [])
+        settings = _settings(
+            data_dir,
+            model,
+            base_url,
+            input_price,
+            output_price,
+            [],
+            env_file,
+        )
         report_path = output or Path(f"review-report-{run_id}.md")
         result = _service(settings).resume(
             run_id,
@@ -197,6 +209,36 @@ def list_tools() -> None:
     """List built-in and installed declarative review tools."""
     for name in default_registry().names():
         typer.echo(name)
+
+
+@app.command()
+def doctor(
+    env_file: Optional[Path] = typer.Option(None, "--env-file"),
+    data_dir: Optional[Path] = typer.Option(None, "--data-dir"),
+) -> None:
+    """检查本地配置，但绝不输出 API Key 内容。"""
+    try:
+        settings = Settings.from_env(data_dir=data_dir, env_file=env_file)
+        typer.echo(
+            f"配置文件: {settings.env_file_path if settings.env_file_path else '未使用'}"
+        )
+        typer.echo(f"模型地址: {settings.llm_base_url}")
+        typer.echo(f"模型名称: {settings.llm_model or '未配置'}")
+        typer.echo(f"API Key: {'已配置' if settings.llm_api_key else '未配置'}")
+        typer.echo(
+            "输入价格: "
+            f"{settings.input_price_cny_per_million} CNY / 1M tokens"
+        )
+        typer.echo(
+            "输出价格: "
+            f"{settings.output_price_cny_per_million} CNY / 1M tokens"
+        )
+        typer.echo(f"数据目录: {settings.data_dir.expanduser().resolve()}")
+        settings.validate_for_review()
+        typer.secho("配置状态: 可以执行评审", fg=typer.colors.GREEN)
+    except (ConfigurationError, OSError, ValueError) as exc:
+        typer.secho(f"配置状态: 未完成 - {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command()

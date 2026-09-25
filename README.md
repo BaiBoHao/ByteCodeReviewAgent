@@ -4,6 +4,9 @@ ByteCodeReviewAgent is the first-stage backend and CLI for a recoverable, tracea
 budget-aware AI code review product. It reviews a local Git diff, GitHub pull request, or
 GitLab merge request and produces a Markdown report. It does not execute repository code.
 
+> 中文用户请先阅读[配置说明](docs/配置说明.md)。CLI 现在会自动读取当前目录的 `.env`，
+> 也支持通过 `--env-file` 指定其他本地配置文件。
+
 ## What is implemented
 
 - Local diff, standard input, GitHub PR, and GitLab MR source adapters
