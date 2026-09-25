@@ -16,7 +16,6 @@ from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
 from bytecode_review_agent.tools import default_registry
 
-
 app = typer.Typer(
     no_args_is_help=True,
     help="Recoverable, traceable and budget-aware AI code review backend.",
@@ -249,10 +248,10 @@ def serve(
     open_page: bool = typer.Option(False, "--open", help="启动后打开本地页面。"),
 ) -> None:
     """启动仅监听本机回环地址的 API 与 Web 页面。"""
-    import threading
-    import webbrowser
     import os
     import secrets
+    import threading
+    import webbrowser
 
     import uvicorn
 

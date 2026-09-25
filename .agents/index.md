@@ -2,7 +2,7 @@
 
 - Root: `E:\ByteCodeReviewAgent`
 - Main branch: `main`
-- Active implementation branch: `codex/vscode-sidecar`
+- Active implementation branch: `codex/edge-extension`
 
 # Reading Rules
 
@@ -26,3 +26,4 @@
 - [VS Code 插件 MVP](20260925T141655-vscode-extension-mvp.md) - Runner 生命周期、SecretStorage、Activity Bar、评审命令、Webview 与 VSIX 打包完成。
 - [Windows Runner sidecar](20260925T144751-runner-sidecar.md) - PyInstaller 隔离构建、36.1 MB EXE、实际 API 与内置页面烟雾测试通过。
 - [LEFT 虚拟文档与 Diff Editor](20260925T145312-left-diff-editor.md) - Run 脱敏上下文 API、VS Code 虚拟文档与 LEFT Diff Editor 完成，33 项测试通过。
+- [Edge 侧边栏扩展与安全配对](20260925T152602-edge-extension.md) - Manifest V3 Side Panel、安全配对、Runner EXE 重建和浏览器联调完成。

@@ -31,7 +31,6 @@ from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
 from bytecode_review_agent.tools import default_registry
 
-
 _ALLOWED_ORIGIN_PATTERN = (
     r"^(?:http://(?:127\.0\.0\.1|localhost)(?::\d+)?"
     r"|vscode-webview://[A-Za-z0-9._-]+"

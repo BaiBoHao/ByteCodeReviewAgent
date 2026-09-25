@@ -1,0 +1,54 @@
+:root {
+  color: #17203a;
+  background: #f4f6fb;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #f4f6fb; }
+
+.panel-shell { min-height: 100vh; padding: 16px; }
+.panel-shell.centered {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.brand-mark, .mini-mark {
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(145deg, #3157d5, #7081ed);
+  box-shadow: 0 10px 26px rgba(49, 87, 213, 0.24);
+}
+.brand-mark { width: 58px; height: 58px; margin-bottom: 18px; border-radius: 18px; font-size: 25px; }
+.mini-mark { width: 36px; height: 36px; border-radius: 11px; font-size: 17px; }
+
+.pair-card { width: 100%; max-width: 380px; text-align: left; box-shadow: 0 14px 36px rgba(25, 42, 84, 0.09); }
+.pairing-input { font-family: "SFMono-Regular", Consolas, monospace; font-size: 19px; letter-spacing: 0.16em; text-transform: uppercase; }
+.privacy-note { margin-top: 18px; }
+
+.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.brand-line { display: flex; align-items: center; gap: 10px; }
+.subtitle { margin-top: 2px; color: #8992a8; font-size: 11px; }
+
+.review-card, .finding-card { border: 1px solid rgba(35, 50, 90, 0.06); box-shadow: 0 10px 28px rgba(29, 44, 85, 0.07); }
+.card-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #3157d5; }
+.card-heading .ant-typography { margin-right: auto; color: #17203a; }
+.action-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.action-row .ant-form-item { margin-bottom: 14px; }
+.summary-line { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 16px 4px 4px; }
+
+.finding-card { width: 100%; }
+.finding-card h5.ant-typography { margin: 10px 0 4px; }
+.finding-card .ant-typography { margin-bottom: 6px; }
+.location { display: block; margin-bottom: 8px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }
+.trace-view { max-height: 60vh; overflow: auto; padding: 12px; color: #dce5ff; border-radius: 10px; background: #172039; font-size: 11px; }
+
+@media (max-width: 360px) {
+  .panel-shell { padding: 12px; }
+  .action-row { align-items: stretch; flex-direction: column; }
+  .action-row .ant-input-number, .action-row .ant-btn { width: 100%; }
+}

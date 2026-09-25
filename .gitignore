@@ -17,4 +17,5 @@ web/.vite/
 output/playwright/
 extensions/vscode/*.vsix
 extensions/vscode/runner/
+extensions/browser/*.zip
 .runner-build-venv/
