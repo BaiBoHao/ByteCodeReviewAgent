@@ -1,10 +1,17 @@
 import type { ConfigStatus, ReviewJob, RunDetail, RunListItem } from "./types";
 
+const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+const sessionToken = fragment.get("session");
+if (sessionToken) {
+  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(sessionToken ? { "X-Review-Agent-Token": sessionToken } : {}),
       ...init?.headers,
     },
   });

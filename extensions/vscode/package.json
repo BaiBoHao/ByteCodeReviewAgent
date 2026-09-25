@@ -1,0 +1,148 @@
+{
+  "name": "bytecode-review-agent",
+  "displayName": "Review Agent",
+  "description": "本地优先、可恢复、可追踪的 AI 代码评审插件。",
+  "version": "0.1.0",
+  "publisher": "baibohao",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BaiBoHao/ByteCodeReviewAgent.git"
+  },
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other",
+    "Linters"
+  ],
+  "keywords": [
+    "code review",
+    "ai",
+    "security",
+    "trace"
+  ],
+  "activationEvents": [
+    "onView:reviewAgent.runs",
+    "onCommand:reviewAgent.openDashboard",
+    "onCommand:reviewAgent.reviewWorkingTree",
+    "onCommand:reviewAgent.reviewStaged",
+    "onCommand:reviewAgent.reviewPullRequest"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "reviewAgent",
+          "title": "Review Agent",
+          "icon": "media/review-agent.svg"
+        }
+      ]
+    },
+    "views": {
+      "reviewAgent": [
+        {
+          "id": "reviewAgent.runs",
+          "name": "评审运行"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "reviewAgent.runs",
+        "contents": "本地 Runner 尚未就绪。\n[打开控制台](command:reviewAgent.openDashboard)\n[配置 API Key](command:reviewAgent.setApiKey)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "reviewAgent.openDashboard",
+        "title": "Review Agent: 打开控制台",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "reviewAgent.reviewWorkingTree",
+        "title": "Review Agent: 评审未提交修改",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "reviewAgent.reviewStaged",
+        "title": "Review Agent: 评审已暂存修改",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "reviewAgent.reviewPullRequest",
+        "title": "Review Agent: 评审 PR/MR",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "reviewAgent.setApiKey",
+        "title": "Review Agent: 安全配置 API Key",
+        "icon": "$(key)"
+      },
+      {
+        "command": "reviewAgent.restartRunner",
+        "title": "Review Agent: 重启本地 Runner",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "reviewAgent.refresh",
+        "title": "Review Agent: 刷新",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "reviewAgent.openFinding",
+        "title": "Review Agent: 打开 Finding"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "reviewAgent.reviewWorkingTree",
+          "when": "view == reviewAgent.runs",
+          "group": "navigation@1"
+        },
+        {
+          "command": "reviewAgent.refresh",
+          "when": "view == reviewAgent.runs",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Review Agent",
+      "properties": {
+        "reviewAgent.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "用于启动本地 Runner 的 Python 可执行文件。"
+        },
+        "reviewAgent.envFile": {
+          "type": "string",
+          "default": "",
+          "description": "可选的 Review Agent env 配置文件绝对路径。"
+        },
+        "reviewAgent.defaultBudgetCny": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0.01,
+          "description": "单次评审默认最高预算。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "npm run typecheck && node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

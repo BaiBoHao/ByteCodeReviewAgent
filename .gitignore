@@ -11,7 +11,8 @@ dist/
 build/
 coverage.xml
 .coverage
-web/node_modules/
+**/node_modules/
 web/.vite/
 .playwright-cli/
 output/playwright/
+extensions/vscode/*.vsix
