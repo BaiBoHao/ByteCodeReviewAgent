@@ -2,7 +2,7 @@
 
 - Root: `E:\ByteCodeReviewAgent`
 - Main branch: `main`
-- Active implementation branch: `codex/vscode-extension`
+- Active implementation branch: `codex/vscode-sidecar`
 
 # Reading Rules
 
@@ -24,3 +24,4 @@
 - [下一部署形态决策](20260925T135627-next-deployment-vscode.md) - 下一阶段选择 VS Code 插件与本地 Runner sidecar，优先补会话令牌和 SecretStorage。
 - [本地 API 会话安全](20260925T140849-local-api-session-security.md) - 随机会话令牌、HttpOnly Cookie、Host 与 Origin 校验完成，32 项测试通过。
 - [VS Code 插件 MVP](20260925T141655-vscode-extension-mvp.md) - Runner 生命周期、SecretStorage、Activity Bar、评审命令、Webview 与 VSIX 打包完成。
+- [Windows Runner sidecar](20260925T144751-runner-sidecar.md) - PyInstaller 隔离构建、36.1 MB EXE、实际 API 与内置页面烟雾测试通过。

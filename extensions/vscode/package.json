@@ -118,6 +118,11 @@
           "default": "python",
           "description": "用于启动本地 Runner 的 Python 可执行文件。"
         },
+        "reviewAgent.runnerPath": {
+          "type": "string",
+          "default": "",
+          "description": "可选的 review-agent-runner.exe 绝对路径；配置后不再依赖 Python。"
+        },
         "reviewAgent.envFile": {
           "type": "string",
           "default": "",

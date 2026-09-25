@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import * as path from "node:path";
 import * as vscode from "vscode";
@@ -49,6 +50,11 @@ export class RunnerManager implements vscode.Disposable {
 
     const configuration = vscode.workspace.getConfiguration("reviewAgent");
     const pythonPath = configuration.get<string>("pythonPath", "python");
+    const configuredRunner = configuration.get<string>("runnerPath", "").trim();
+    const bundledRunner = this.context.asAbsolutePath(
+      path.join("runner", "review-agent-runner.exe"),
+    );
+    const runnerPath = configuredRunner || (existsSync(bundledRunner) ? bundledRunner : "");
     const envFile = configuration.get<string>("envFile", "").trim();
     const apiKey = await this.context.secrets.get("reviewAgent.llmApiKey");
     this.port = await freePort();
@@ -56,24 +62,26 @@ export class RunnerManager implements vscode.Disposable {
     const dataDir = path.join(this.context.globalStorageUri.fsPath, "data");
     await vscode.workspace.fs.createDirectory(vscode.Uri.file(dataDir));
 
-    const args = [
-      "-m",
-      "bytecode_review_agent",
+    const runnerArgs = [
       "serve",
       "--port",
       String(this.port),
       "--data-dir",
       dataDir,
     ];
-    if (envFile) args.push("--env-file", envFile);
+    if (envFile) runnerArgs.push("--env-file", envFile);
+    const executable = runnerPath || pythonPath;
+    const args = runnerPath
+      ? runnerArgs
+      : ["-m", "bytecode_review_agent", ...runnerArgs];
 
     const environment = {
       ...process.env,
       REVIEW_AGENT_SESSION_TOKEN: this.token,
       ...(apiKey ? { REVIEW_AGENT_LLM_API_KEY: apiKey } : {}),
     };
-    this.output.appendLine(`启动 Runner：${pythonPath} ${args.join(" ")}`);
-    this.process = spawn(pythonPath, args, {
+    this.output.appendLine(`启动 Runner：${executable} ${args.join(" ")}`);
+    this.process = spawn(executable, args, {
       cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
       env: environment,
       windowsHide: true,

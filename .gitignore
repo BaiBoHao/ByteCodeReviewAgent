@@ -16,3 +16,5 @@ web/.vite/
 .playwright-cli/
 output/playwright/
 extensions/vscode/*.vsix
+extensions/vscode/runner/
+.runner-build-venv/

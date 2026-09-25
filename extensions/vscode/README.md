@@ -41,12 +41,16 @@ VS Code Settings：
 ```json
 {
   "reviewAgent.pythonPath": "python",
+  "reviewAgent.runnerPath": "E:\\ByteCodeReviewAgent\\dist\\review-agent-runner\\review-agent-runner.exe",
   "reviewAgent.envFile": "E:\\ByteCodeReviewAgent\\.env",
   "reviewAgent.defaultBudgetCny": 10
 }
 ```
 
 API Key 通过命令 `Review Agent: 安全配置 API Key` 写入 SecretStorage，不要放进 settings.json。
+
+`runnerPath` 有值时直接启动 EXE；为空时优先查找 VSIX 内置 Runner，最后回退到
+`python -m bytecode_review_agent`。
 
 ## 当前边界
 

@@ -25,6 +25,9 @@ dev = [
   "pytest>=8,<9",
   "ruff>=0.6,<1",
 ]
+runner = [
+  "pyinstaller>=6.10,<7",
+]
 
 [project.scripts]
 review-agent = "bytecode_review_agent.cli:app"
