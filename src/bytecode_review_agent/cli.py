@@ -260,9 +260,15 @@ def serve(
 
     settings = Settings.from_env(data_dir=data_dir, env_file=env_file)
     session_token = os.getenv("REVIEW_AGENT_SESSION_TOKEN") or secrets.token_urlsafe(32)
-    api = create_app(settings=settings, session_token=session_token)
+    pairing_code = os.getenv("REVIEW_AGENT_PAIRING_CODE") or secrets.token_hex(4).upper()
+    api = create_app(
+        settings=settings,
+        session_token=session_token,
+        pairing_code=pairing_code,
+    )
     url = f"http://127.0.0.1:{port}"
     typer.echo(f"Review Agent 本地服务: {url}")
+    typer.echo(f"浏览器扩展配对码: {pairing_code}")
     if open_page:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     uvicorn.run(api, host="127.0.0.1", port=port, log_level="info")

@@ -12,6 +12,7 @@ export interface ConfigStatus {
   model: string | null;
   base_url: string;
   api_key_configured: boolean;
+  pairing_code: string | null;
   input_price_cny_per_million: string;
   output_price_cny_per_million: string;
   data_dir: string;

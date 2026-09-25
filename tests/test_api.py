@@ -90,8 +90,10 @@ class LocalAPITests(unittest.TestCase):
                 service_factory=service_factory,
                 static_dir=Path(directory) / "missing-static",
                 session_token="session-test-token",
+                pairing_code="A1B2C3D4",
             )
             with TestClient(app) as client:
+                extension_origin = f"chrome-extension://{'a' * 32}"
                 unauthorized = client.get("/api/config")
                 bootstrap = client.get("/api/bootstrap")
                 authorized = client.get("/api/config")
@@ -104,12 +106,38 @@ class LocalAPITests(unittest.TestCase):
                     "/api/config",
                     headers={"Host": "attacker.invalid"},
                 )
+                wrong_pair = client.post(
+                    "/api/pair",
+                    headers={"Origin": extension_origin},
+                    json={"code": "00000000"},
+                )
+                paired = client.post(
+                    "/api/pair",
+                    headers={"Origin": extension_origin},
+                    json={"code": "a1b2c3d4"},
+                )
+                preflight = client.options(
+                    "/api/pair",
+                    headers={
+                        "Origin": extension_origin,
+                        "Access-Control-Request-Method": "POST",
+                        "Access-Control-Request-Headers": "content-type",
+                    },
+                )
 
             self.assertEqual(unauthorized.status_code, 401)
             self.assertEqual(bootstrap.status_code, 200)
             self.assertEqual(authorized.status_code, 200)
             self.assertEqual(rejected_origin.status_code, 403)
             self.assertEqual(rejected_host.status_code, 400)
+            self.assertEqual(wrong_pair.status_code, 401)
+            self.assertEqual(paired.status_code, 200)
+            self.assertEqual(paired.json()["session_token"], "session-test-token")
+            self.assertEqual(preflight.status_code, 200)
+            self.assertEqual(
+                preflight.headers["access-control-allow-origin"],
+                extension_origin,
+            )
 
     def test_built_web_app_is_served_without_shadowing_api_404s(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

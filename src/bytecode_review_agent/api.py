@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-from concurrent.futures import ThreadPoolExecutor
+import re
 from collections.abc import AsyncIterator, Callable
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -14,6 +15,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -30,6 +32,17 @@ from bytecode_review_agent.storage import SQLiteStorage
 from bytecode_review_agent.tools import default_registry
 
 
+_ALLOWED_ORIGIN_PATTERN = (
+    r"^(?:http://(?:127\.0\.0\.1|localhost)(?::\d+)?"
+    r"|vscode-webview://[A-Za-z0-9._-]+"
+    r"|chrome-extension://[a-p]{32})$"
+)
+
+
+def _is_allowed_origin(origin: str) -> bool:
+    return re.fullmatch(_ALLOWED_ORIGIN_PATTERN, origin) is not None
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -41,6 +54,10 @@ class ReviewCreateRequest(BaseModel):
 
 class ReviewResumeRequest(BaseModel):
     budget_cny: Decimal | None = Field(default=None, gt=0)
+
+
+class PairRequest(BaseModel):
+    code: str = Field(min_length=8, max_length=32)
 
 
 @dataclass(slots=True)
@@ -198,6 +215,7 @@ def create_app(
     service_factory: ServiceFactory = _default_service,
     static_dir: Path | None = None,
     session_token: str | None = None,
+    pairing_code: str | None = None,
 ) -> FastAPI:
     active_settings = settings or Settings.from_env()
     storage = SQLiteStorage(active_settings.database_path)
@@ -220,15 +238,30 @@ def create_app(
     app.state.settings = active_settings
     app.state.storage = storage
     app.state.jobs = manager
+    pairing_attempts = 0
+    pairing_lock = RLock()
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost", "testserver"],
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=_ALLOWED_ORIGIN_PATTERN,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Review-Agent-Token"],
     )
 
     @app.middleware("http")
     async def local_security(request: Request, call_next: Callable) -> Response:
         path = request.url.path
-        if path.startswith("/api/") and path != "/api/bootstrap" and session_token:
+        public_api_paths = {"/api/bootstrap", "/api/pair"}
+        if (
+            request.method != "OPTIONS"
+            and path.startswith("/api/")
+            and path not in public_api_paths
+            and session_token
+        ):
             provided = request.headers.get("X-Review-Agent-Token") or request.cookies.get(
                 "review_agent_session"
             )
@@ -237,12 +270,7 @@ def create_app(
 
         origin = request.headers.get("Origin")
         if origin and request.method not in {"GET", "HEAD", "OPTIONS"}:
-            allowed_origins = (
-                "http://127.0.0.1:",
-                "http://localhost:",
-                "vscode-webview://",
-            )
-            if not origin.startswith(allowed_origins):
+            if not _is_allowed_origin(origin):
                 return JSONResponse(status_code=403, content={"detail": "origin not allowed"})
         return await call_next(request)
 
@@ -257,6 +285,20 @@ def create_app(
                 secure=False,
             )
         return {"status": "ok", "version": __version__}
+
+    @app.post("/api/pair")
+    def pair(request: PairRequest) -> dict[str, str]:
+        nonlocal pairing_attempts
+        if not session_token or not pairing_code:
+            raise HTTPException(status_code=404, detail="browser pairing is disabled")
+        with pairing_lock:
+            if pairing_attempts >= 5:
+                raise HTTPException(status_code=429, detail="too many pairing attempts")
+            if not compare_digest(request.code.strip().upper(), pairing_code.upper()):
+                pairing_attempts += 1
+                raise HTTPException(status_code=401, detail="invalid pairing code")
+            pairing_attempts = 0
+        return {"session_token": session_token}
 
     @app.get("/api/health")
     def health() -> dict[str, object]:
@@ -280,6 +322,7 @@ def create_app(
             "model": active_settings.llm_model,
             "base_url": active_settings.llm_base_url,
             "api_key_configured": bool(active_settings.llm_api_key),
+            "pairing_code": pairing_code,
             "input_price_cny_per_million": str(
                 active_settings.input_price_cny_per_million
             ),

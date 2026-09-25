@@ -393,6 +393,11 @@ function ReviewDashboard() {
                 <Descriptions.Item label="API Key">
                   {config?.api_key_configured ? "已安全配置" : "未配置"}
                 </Descriptions.Item>
+                <Descriptions.Item label="扩展配对码">
+                  <Text copyable code>
+                    {config?.pairing_code || "未启用"}
+                  </Text>
+                </Descriptions.Item>
                 <Descriptions.Item label="数据目录">
                   <Text ellipsis={{ tooltip: config?.data_dir }} className="config-path">
                     {config?.data_dir || "--"}
