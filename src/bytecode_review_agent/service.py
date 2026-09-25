@@ -19,6 +19,7 @@ from bytecode_review_agent.errors import (
 from bytecode_review_agent.llm import ReviewerClient, parse_model_review
 from bytecode_review_agent.models import (
     Confidence,
+    DiffSide,
     DiffChunk,
     Disposition,
     Finding,
@@ -285,7 +286,10 @@ class ReviewService:
     ) -> Finding:
         expected_path = chunk.file_path.replace("\\", "/")
         reported_path = draft.file_path.replace("\\", "/")
-        valid_location = reported_path == expected_path and draft.line in chunk.added_lines
+        allowed_lines = (
+            chunk.added_lines if draft.side == DiffSide.RIGHT else chunk.removed_lines
+        )
+        valid_location = reported_path == expected_path and draft.line in allowed_lines
         has_evidence = any(item.strip() for item in draft.evidence)
 
         if draft.confidence == Confidence.HIGH and valid_location and has_evidence:
@@ -298,7 +302,8 @@ class ReviewService:
             Disposition.ACCEPT if effective == Confidence.HIGH else Disposition.REFERENCE
         )
         fingerprint = sha256_text(
-            f"{expected_path}:{draft.line}:{draft.category.lower()}:{draft.title.lower()}"
+            f"{expected_path}:{draft.side.value}:{draft.line}:"
+            f"{draft.category.lower()}:{draft.title.lower()}"
         )
         return Finding(
             id=f"finding_{uuid4().hex[:16]}",
@@ -306,6 +311,9 @@ class ReviewService:
             trace_id=trace_id,
             file_path=expected_path,
             line=draft.line,
+            side=draft.side,
+            old_line=draft.line if draft.side == DiffSide.LEFT else None,
+            new_line=draft.line if draft.side == DiffSide.RIGHT else None,
             severity=draft.severity,
             category=draft.category,
             title=draft.title,

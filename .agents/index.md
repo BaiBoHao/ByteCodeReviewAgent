@@ -20,3 +20,4 @@
 - [阶段分支已推送](20260925T113048-stage-branch-pushed.md) - `codex/phase-one-backend-cli` 已保留完整提交历史推送至 GitHub，未合并主分支。
 - [本地 API 与 Web 界面](20260925T133635-local-api-web-ui.md) - FastAPI、本地后台任务、React/Ant Design 页面、26 项测试和 Playwright 视觉验收完成。
 - [base/head 完整文件与函数级上下文](20260925T134750-base-head-context.md) - GitHub/GitLab 完整文件、Python AST 上下文、脱敏恢复制品和 Trace 哈希完成，29 项测试通过。
+- [LEFT/RIGHT 与删除行定位](20260925T135248-left-right-deleted-lines.md) - 新增左右侧行号、SQLite 迁移、中文报告与 Web 侧别展示，31 项测试通过。

@@ -10,6 +10,7 @@ from bytecode_review_agent.config import Settings
 from bytecode_review_agent.errors import ModelResponseError, RunExecutionError
 from bytecode_review_agent.llm import ReviewerClient
 from bytecode_review_agent.models import (
+    DiffSide,
     FileContext,
     LLMCallResult,
     RunStatus,
@@ -34,10 +35,17 @@ DIFF = """diff --git a/app.py b/app.py
 class FakeReviewer(ReviewerClient):
     model = "fake-model"
 
-    def __init__(self, failures: int = 0, malformed: int = 0, line: int = 2) -> None:
+    def __init__(
+        self,
+        failures: int = 0,
+        malformed: int = 0,
+        line: int = 2,
+        side: str = "RIGHT",
+    ) -> None:
         self.failures = failures
         self.malformed = malformed
         self.line = line
+        self.side = side
         self.calls = 0
         self.prompts: list[str] = []
 
@@ -61,6 +69,7 @@ class FakeReviewer(ReviewerClient):
                     {
                         "file_path": "app.py",
                         "line": self.line,
+                        "side": self.side,
                         "severity": "high",
                         "category": "security",
                         "title": "Dynamic execution of untrusted input",
@@ -134,6 +143,34 @@ def make_service(path: Path, reviewer: FakeReviewer, settings: Settings) -> Revi
 
 
 class ReviewServiceTests(unittest.TestCase):
+    def test_removed_line_can_be_accepted_on_left_side(self) -> None:
+        deleted_diff = """diff --git a/app.py b/app.py
+--- a/app.py
++++ b/app.py
+@@ -1,2 +1 @@
+-if not values:
+ return calculate(values) / len(values)
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            diff_path = root / "deleted.diff"
+            diff_path.write_text(deleted_diff, encoding="utf-8")
+            settings = make_settings(root)
+            service = make_service(
+                root,
+                FakeReviewer(line=1, side="LEFT"),
+                settings,
+            )
+
+            result = service.start(str(diff_path), budget_cny=Decimal("1"))
+
+            finding = result.findings[0]
+            self.assertEqual(finding.side, DiffSide.LEFT)
+            self.assertEqual(finding.old_line, 1)
+            self.assertIsNone(finding.new_line)
+            self.assertEqual(finding.effective_confidence.value, "high")
+            self.assertEqual(finding.disposition.value, "accept")
+
     def test_full_file_context_is_redacted_selected_and_traced(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

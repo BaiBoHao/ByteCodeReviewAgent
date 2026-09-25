@@ -51,6 +51,7 @@ FINDINGS_BY_FILE: dict[str, list[dict[str, object]]] = {
         {
             "file_path": "src/review_project_test/order_service.py",
             "line": 20,
+            "side": "LEFT",
             "severity": "high",
             "category": "correctness",
             "title": "Empty orders cause division by zero",

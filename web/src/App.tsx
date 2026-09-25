@@ -562,8 +562,12 @@ function FindingSection({
                       {severityMeta[finding.severity].label}
                     </Tag>
                     <Tag>{finding.category}</Tag>
+                    <Tag color={finding.side === "LEFT" ? "magenta" : "blue"}>
+                      {finding.side === "LEFT" ? "删除侧" : "新增侧"}
+                    </Tag>
                     <Text type="secondary">
-                      {finding.file_path}:{finding.line}
+                      {finding.file_path}:
+                      {finding.side === "LEFT" ? finding.old_line : finding.new_line}
                     </Text>
                   </Space>
                   <Button size="small" type="link" onClick={() => onTrace(finding.trace_id)}>

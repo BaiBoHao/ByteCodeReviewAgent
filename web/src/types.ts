@@ -43,6 +43,9 @@ export interface Finding {
   trace_id: string;
   file_path: string;
   line: number;
+  side: "LEFT" | "RIGHT";
+  old_line: number | null;
+  new_line: number | null;
   severity: "critical" | "high" | "medium" | "low";
   category: string;
   title: string;

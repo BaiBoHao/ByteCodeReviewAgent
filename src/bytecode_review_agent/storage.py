@@ -100,6 +100,9 @@ class SQLiteStorage:
                     trace_id TEXT NOT NULL REFERENCES traces(id),
                     file_path TEXT NOT NULL,
                     line INTEGER NOT NULL,
+                    side TEXT NOT NULL DEFAULT 'RIGHT',
+                    old_line INTEGER,
+                    new_line INTEGER,
                     severity TEXT NOT NULL,
                     category TEXT NOT NULL,
                     title TEXT NOT NULL,
@@ -114,6 +117,18 @@ class SQLiteStorage:
                 );
                 """
             )
+            finding_columns = {
+                str(row["name"])
+                for row in connection.execute("PRAGMA table_info(findings)").fetchall()
+            }
+            if "side" not in finding_columns:
+                connection.execute(
+                    "ALTER TABLE findings ADD COLUMN side TEXT NOT NULL DEFAULT 'RIGHT'"
+                )
+            if "old_line" not in finding_columns:
+                connection.execute("ALTER TABLE findings ADD COLUMN old_line INTEGER")
+            if "new_line" not in finding_columns:
+                connection.execute("ALTER TABLE findings ADD COLUMN new_line INTEGER")
 
     def create_run(
         self,
@@ -235,10 +250,10 @@ class SQLiteStorage:
                 connection.execute(
                     """
                     INSERT OR IGNORE INTO findings (
-                        id, run_id, trace_id, file_path, line, severity, category, title,
-                        explanation, suggestion, model_confidence, effective_confidence,
-                        disposition, evidence_json, fingerprint
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        id, run_id, trace_id, file_path, line, side, old_line, new_line,
+                        severity, category, title, explanation, suggestion, model_confidence,
+                        effective_confidence, disposition, evidence_json, fingerprint
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         finding.id,
@@ -246,6 +261,9 @@ class SQLiteStorage:
                         finding.trace_id,
                         finding.file_path,
                         finding.line,
+                        finding.side.value,
+                        finding.old_line,
+                        finding.new_line,
                         finding.severity.value,
                         finding.category,
                         finding.title,
@@ -384,6 +402,21 @@ class SQLiteStorage:
                 trace_id=row["trace_id"],
                 file_path=row["file_path"],
                 line=row["line"],
+                side=row["side"] or "RIGHT",
+                old_line=(
+                    row["old_line"]
+                    if row["old_line"] is not None
+                    else row["line"]
+                    if row["side"] == "LEFT"
+                    else None
+                ),
+                new_line=(
+                    row["new_line"]
+                    if row["new_line"] is not None
+                    else row["line"]
+                    if row["side"] != "LEFT"
+                    else None
+                ),
                 severity=row["severity"],
                 category=row["category"],
                 title=row["title"],

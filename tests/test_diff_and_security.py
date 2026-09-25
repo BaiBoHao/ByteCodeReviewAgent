@@ -22,6 +22,20 @@ class DiffAndSecurityTests(unittest.TestCase):
         self.assertEqual(len(chunks), 1)
         self.assertEqual(chunks[0].file_path, "app.py")
         self.assertEqual(chunks[0].added_lines, {1, 2, 3})
+        self.assertEqual(chunks[0].removed_lines, set())
+
+    def test_parses_removed_line_numbers(self) -> None:
+        diff = """diff --git a/app.py b/app.py
+--- a/app.py
++++ b/app.py
+@@ -4,3 +4,1 @@
+-guard = True
+-validate(guard)
+ return run()
+"""
+        chunk = chunk_diff(diff, max_chars=10_000)[0]
+        self.assertEqual(chunk.removed_lines, {4, 5})
+        self.assertEqual(chunk.added_lines, set())
 
     def test_redacts_secret_assignments_before_model_use(self) -> None:
         sanitized, count = SecretRedactor().redact(SAMPLE_DIFF)

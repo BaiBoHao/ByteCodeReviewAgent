@@ -39,6 +39,11 @@ class Disposition(StrEnum):
     REFERENCE = "reference"
 
 
+class DiffSide(StrEnum):
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+
+
 class SourceSnapshot(BaseModel):
     kind: SourceKind
     reference: str
@@ -78,6 +83,7 @@ class ToolObservation(BaseModel):
 class FindingDraft(BaseModel):
     file_path: str
     line: int = Field(ge=1)
+    side: DiffSide = DiffSide.RIGHT
     severity: Severity
     category: str = Field(min_length=1, max_length=80)
     title: str = Field(min_length=1, max_length=160)
@@ -97,6 +103,9 @@ class Finding(BaseModel):
     trace_id: str
     file_path: str
     line: int
+    side: DiffSide
+    old_line: int | None = None
+    new_line: int | None = None
     severity: Severity
     category: str
     title: str
