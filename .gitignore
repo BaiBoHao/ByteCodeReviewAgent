@@ -11,3 +11,7 @@ dist/
 build/
 coverage.xml
 .coverage
+web/node_modules/
+web/.vite/
+.playwright-cli/
+output/playwright/

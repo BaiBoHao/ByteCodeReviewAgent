@@ -242,6 +242,30 @@ def doctor(
 
 
 @app.command()
+def serve(
+    port: int = typer.Option(8765, min=1024, max=65535),
+    data_dir: Path = typer.Option(Path(".review-agent"), "--data-dir"),
+    env_file: Optional[Path] = typer.Option(None, "--env-file"),
+    open_page: bool = typer.Option(False, "--open", help="启动后打开本地页面。"),
+) -> None:
+    """启动仅监听本机回环地址的 API 与 Web 页面。"""
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from bytecode_review_agent.api import create_app
+
+    settings = Settings.from_env(data_dir=data_dir, env_file=env_file)
+    api = create_app(settings=settings)
+    url = f"http://127.0.0.1:{port}"
+    typer.echo(f"Review Agent 本地服务: {url}")
+    if open_page:
+        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+    uvicorn.run(api, host="127.0.0.1", port=port, log_level="info")
+
+
+@app.command()
 def version() -> None:
     """Print the installed version."""
     typer.echo(__version__)

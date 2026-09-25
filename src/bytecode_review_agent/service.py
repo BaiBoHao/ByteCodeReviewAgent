@@ -64,11 +64,12 @@ class ReviewService:
         budget_cny: Decimal,
         output_path: Path | None = None,
         stdin_text: str | None = None,
+        run_id: str | None = None,
     ) -> ReviewResult:
         if budget_cny <= 0:
             raise SourceError("budget must be greater than zero")
         source = self.sources.load(source_value, stdin_text=stdin_text)
-        run_id = f"run_{uuid4().hex[:16]}"
+        run_id = run_id or f"run_{uuid4().hex[:16]}"
         run_dir = self.settings.artifacts_dir / run_id
         raw_path = run_dir / "raw.diff"
         sanitized_path = run_dir / "sanitized.diff"

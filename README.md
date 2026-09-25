@@ -6,6 +6,8 @@ GitLab merge request and produces a Markdown report. It does not execute reposit
 
 > 中文用户请先阅读[配置说明](docs/配置说明.md)。CLI 现在会自动读取当前目录的 `.env`，
 > 也支持通过 `--env-file` 指定其他本地配置文件。
+>
+> 本地 API 与 React/Ant Design 页面请阅读[本地 Web 界面说明](docs/本地Web界面.md)。
 
 ## What is implemented
 
