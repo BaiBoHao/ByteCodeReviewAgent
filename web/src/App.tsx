@@ -99,6 +99,7 @@ function ReviewDashboard() {
   const [loadingRun, setLoadingRun] = useState(false);
 
   const refresh = useCallback(async () => {
+    await api.bootstrap();
     const [healthValue, configValue, toolsValue, runValues] = await Promise.all([
       api.health(),
       api.config(),

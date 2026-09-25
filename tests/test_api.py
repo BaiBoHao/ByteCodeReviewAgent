@@ -82,6 +82,34 @@ def service_factory(settings: Settings, storage: SQLiteStorage) -> ReviewService
 
 
 class LocalAPITests(unittest.TestCase):
+    def test_session_token_host_and_origin_are_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            app = create_app(
+                settings=settings_for(Path(directory)),
+                service_factory=service_factory,
+                static_dir=Path(directory) / "missing-static",
+                session_token="session-test-token",
+            )
+            with TestClient(app) as client:
+                unauthorized = client.get("/api/config")
+                bootstrap = client.get("/api/bootstrap")
+                authorized = client.get("/api/config")
+                rejected_origin = client.post(
+                    "/api/reviews",
+                    headers={"Origin": "https://attacker.invalid"},
+                    json={"source": "change.diff", "budget_cny": "1"},
+                )
+                rejected_host = client.get(
+                    "/api/config",
+                    headers={"Host": "attacker.invalid"},
+                )
+
+            self.assertEqual(unauthorized.status_code, 401)
+            self.assertEqual(bootstrap.status_code, 200)
+            self.assertEqual(authorized.status_code, 200)
+            self.assertEqual(rejected_origin.status_code, 403)
+            self.assertEqual(rejected_host.status_code, 400)
+
     def test_built_web_app_is_served_without_shadowing_api_404s(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             static_dir = (

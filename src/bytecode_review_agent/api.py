@@ -6,15 +6,17 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from hmac import compare_digest
 from pathlib import Path
 from threading import RLock
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from bytecode_review_agent import __version__
 from bytecode_review_agent.config import Settings
@@ -193,6 +195,7 @@ def create_app(
     settings: Settings | None = None,
     service_factory: ServiceFactory = _default_service,
     static_dir: Path | None = None,
+    session_token: str | None = None,
 ) -> FastAPI:
     active_settings = settings or Settings.from_env()
     storage = SQLiteStorage(active_settings.database_path)
@@ -215,6 +218,43 @@ def create_app(
     app.state.settings = active_settings
     app.state.storage = storage
     app.state.jobs = manager
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["127.0.0.1", "localhost", "testserver"],
+    )
+
+    @app.middleware("http")
+    async def local_security(request: Request, call_next: Callable) -> Response:
+        path = request.url.path
+        if path.startswith("/api/") and path != "/api/bootstrap" and session_token:
+            provided = request.headers.get("X-Review-Agent-Token") or request.cookies.get(
+                "review_agent_session"
+            )
+            if not provided or not compare_digest(provided, session_token):
+                return JSONResponse(status_code=401, content={"detail": "invalid session token"})
+
+        origin = request.headers.get("Origin")
+        if origin and request.method not in {"GET", "HEAD", "OPTIONS"}:
+            allowed_origins = (
+                "http://127.0.0.1:",
+                "http://localhost:",
+                "vscode-webview://",
+            )
+            if not origin.startswith(allowed_origins):
+                return JSONResponse(status_code=403, content={"detail": "origin not allowed"})
+        return await call_next(request)
+
+    @app.get("/api/bootstrap")
+    def bootstrap(response: Response) -> dict[str, object]:
+        if session_token:
+            response.set_cookie(
+                "review_agent_session",
+                session_token,
+                httponly=True,
+                samesite="strict",
+                secure=False,
+            )
+        return {"status": "ok", "version": __version__}
 
     @app.get("/api/health")
     def health() -> dict[str, object]:

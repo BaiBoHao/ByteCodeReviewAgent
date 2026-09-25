@@ -109,6 +109,11 @@ http://127.0.0.1:8765/docs
 ## 安全边界
 
 - `serve` 固定监听 `127.0.0.1`，CLI 不提供公网监听参数。
+- 每次启动生成随机会话令牌；也可由插件通过 `REVIEW_AGENT_SESSION_TOKEN` 注入。
+- 浏览器先调用 `/api/bootstrap`，服务通过 HttpOnly、SameSite=Strict Cookie 建立会话。
+- 插件可以通过 `X-Review-Agent-Token` 请求头访问 API。
+- Host 只允许 `127.0.0.1`、`localhost` 和测试环境。
+- 外部 Origin 的写请求会被拒绝。
 - 未启用 CORS，中间网页不能直接通过跨域请求调用 API。
 - API 配置状态只返回 Key 是否存在，不返回 Key 内容。
 - 前端不保存模型 Key 或 GitHub/GitLab Token。

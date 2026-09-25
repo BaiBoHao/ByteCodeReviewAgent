@@ -251,13 +251,16 @@ def serve(
     """启动仅监听本机回环地址的 API 与 Web 页面。"""
     import threading
     import webbrowser
+    import os
+    import secrets
 
     import uvicorn
 
     from bytecode_review_agent.api import create_app
 
     settings = Settings.from_env(data_dir=data_dir, env_file=env_file)
-    api = create_app(settings=settings)
+    session_token = os.getenv("REVIEW_AGENT_SESSION_TOKEN") or secrets.token_urlsafe(32)
+    api = create_app(settings=settings, session_token=session_token)
     url = f"http://127.0.0.1:{port}"
     typer.echo(f"Review Agent 本地服务: {url}")
     if open_page:

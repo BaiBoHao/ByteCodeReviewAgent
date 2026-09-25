@@ -16,6 +16,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  bootstrap: () => request<{ status: string; version: string }>("/api/bootstrap"),
   health: () => request<{ status: string; version: string; local_only: boolean }>("/api/health"),
   config: () => request<ConfigStatus>("/api/config"),
   tools: () => request<{ tools: string[] }>("/api/tools"),
