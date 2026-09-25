@@ -18,7 +18,7 @@ VS Code 插件作为本地 Review Agent Runner 的第一个 IDE 外壳。插件�
 - 输入 GitHub PR 或 GitLab MR 链接评审。
 - Webview 复用现有 React/Ant Design 控制台。
 - RIGHT Finding 跳转到当前工作区文件和新文件行号。
-- LEFT Finding 打开控制台查看 base/head 证据。
+- LEFT Finding 通过只读虚拟文档打开 base/head Diff Editor。
 
 ## 会话令牌
 
@@ -64,7 +64,7 @@ Python 环境。
 
 - 当前机器没有 `code` CLI，尚未在真实 VS Code Extension Host 中安装运行。
 - Webview 通过 localhost iframe 复用页面，尚未拆分为共享前端组件包。
-- LEFT Finding 暂时打开控制台，没有创建 Git base revision 虚拟文档。
+- 虚拟文档只读取 Runner 保存的脱敏上下文制品，不允许访问任意本地路径。
 - Runner 尚未打包为独立 EXE sidecar。
 - Tree View 只展示最近 Run 和 Finding，不直接展示完整 Trace。
 
@@ -72,6 +72,5 @@ Python 环境。
 
 1. 在安装 VS Code 的环境执行 VSIX 安装验收。
 2. 将 Python Runner 打包为 Windows sidecar。
-3. 为 LEFT Finding 实现 Git revision 虚拟文档与 Diff Editor 跳转。
-4. 将 React 页面拆成可供 Web、VS Code 和浏览器扩展共享的组件包。
-5. 增加扩展自动更新和 Runner 版本兼容检查。
+3. 将 React 页面拆成可供 Web、VS Code 和浏览器扩展共享的组件包。
+4. 增加扩展自动更新和 Runner 版本兼容检查。

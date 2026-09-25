@@ -68,7 +68,7 @@ export class RunsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     item.command = {
       command: "reviewAgent.openFinding",
       title: "打开 Finding",
-      arguments: [finding],
+      arguments: [element.runId, finding],
     };
     return item;
   }

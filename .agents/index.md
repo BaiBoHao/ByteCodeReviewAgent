@@ -25,3 +25,4 @@
 - [本地 API 会话安全](20260925T140849-local-api-session-security.md) - 随机会话令牌、HttpOnly Cookie、Host 与 Origin 校验完成，32 项测试通过。
 - [VS Code 插件 MVP](20260925T141655-vscode-extension-mvp.md) - Runner 生命周期、SecretStorage、Activity Bar、评审命令、Webview 与 VSIX 打包完成。
 - [Windows Runner sidecar](20260925T144751-runner-sidecar.md) - PyInstaller 隔离构建、36.1 MB EXE、实际 API 与内置页面烟雾测试通过。
+- [LEFT 虚拟文档与 Diff Editor](20260925T145312-left-diff-editor.md) - Run 脱敏上下文 API、VS Code 虚拟文档与 LEFT Diff Editor 完成，33 项测试通过。

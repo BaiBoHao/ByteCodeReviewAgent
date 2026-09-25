@@ -2,6 +2,11 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import {
+  CONTEXT_SCHEME,
+  ReviewContextProvider,
+  contextUri,
+} from "./contextProvider";
 import { RunnerManager } from "./runner";
 import { RunsTreeProvider } from "./tree";
 import type { Finding, ReviewJob } from "./types";
@@ -15,8 +20,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("reviewAgent.runs", tree),
   );
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      CONTEXT_SCHEME,
+      new ReviewContextProvider(runner),
+    ),
+  );
 
-  const register = (command: string, callback: (...args: never[]) => unknown) =>
+  const register = (command: string, callback: (...args: unknown[]) => unknown) =>
     context.subscriptions.push(vscode.commands.registerCommand(command, callback));
 
   register("reviewAgent.refresh", () => tree.refresh());
@@ -59,8 +70,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     });
     if (source) await submitReview(runner, tree, source);
   });
-  register("reviewAgent.openFinding", async (finding: Finding) => {
-    await openFinding(runner, finding);
+  register("reviewAgent.openFinding", async (...args: unknown[]) => {
+    const [runId, finding] = args as [string, Finding];
+    await openFinding(runner, runId, finding);
   });
 
   void runner
@@ -159,17 +171,31 @@ async function openDashboard(runner: RunnerManager): Promise<void> {
   }
 }
 
-async function openFinding(runner: RunnerManager, finding: Finding): Promise<void> {
-  if (finding.side === "LEFT") {
-    void vscode.window.showInformationMessage(
-      "该问题位于删除侧，已打开控制台查看 base/head 证据。",
-    );
-    await openDashboard(runner);
-    return;
-  }
+async function openFinding(
+  runner: RunnerManager,
+  runId: string,
+  finding: Finding,
+): Promise<void> {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) return;
   const uri = vscode.Uri.joinPath(workspaceFolder.uri, finding.file_path);
+  if (finding.side === "LEFT") {
+    const base = contextUri(runId, finding.file_path, "base");
+    let head = uri;
+    try {
+      await vscode.workspace.fs.stat(head);
+    } catch {
+      head = contextUri(runId, finding.file_path, "head");
+    }
+    await vscode.commands.executeCommand(
+      "vscode.diff",
+      base,
+      head,
+      `Review Agent：${finding.file_path}（base ↔ head）`,
+      { preview: true },
+    );
+    return;
+  }
   try {
     const document = await vscode.workspace.openTextDocument(uri);
     const editor = await vscode.window.showTextDocument(document);

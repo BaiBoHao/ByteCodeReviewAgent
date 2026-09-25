@@ -36,6 +36,15 @@ export class ReviewAgentApi {
     return this.request(`/api/runs/${runId}`);
   }
 
+  context(
+    runId: string,
+    filePath: string,
+    side: "base" | "head",
+  ): Promise<{ content: string; content_sha256: string | null }> {
+    const query = new URLSearchParams({ file_path: filePath, side });
+    return this.request(`/api/runs/${runId}/context?${query.toString()}`);
+  }
+
   createReview(source: string, budget: number): Promise<ReviewJob> {
     return this.request("/api/reviews", {
       method: "POST",

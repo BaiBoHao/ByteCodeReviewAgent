@@ -10,7 +10,7 @@
 - Webview 复用现有 React/Ant Design 本地控制台。
 - Webview 通过 URL Fragment 接收短期会话令牌，页面读入内存后立即清除 Fragment。
 - RIGHT/新增侧 Finding 可以跳转到当前工作区文件。
-- LEFT/删除侧 Finding 打开控制台查看 base/head 证据。
+- LEFT/删除侧 Finding 使用只读虚拟文档打开 base/head Diff Editor。
 
 ## 开发环境
 
@@ -56,5 +56,5 @@ API Key 通过命令 `Review Agent: 安全配置 API Key` 写入 SecretStorage�
 
 - Runner 需要提前安装 Python 包，尚未打包为独立 EXE sidecar。
 - Webview 当前通过本机 iframe 复用控制台，后续可改成共享前端组件直接构建。
-- LEFT 删除侧暂时打开控制台，尚未创建 VS Code Git revision 虚拟文档。
+- 虚拟文档来自 Runner 保存的脱敏 `contexts.json`，不读取任意本地路径。
 - Tree View 当前展示最近 Run 及其 Finding，不包含完整 Trace 内容。

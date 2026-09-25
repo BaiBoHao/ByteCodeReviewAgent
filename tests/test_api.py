@@ -11,11 +11,12 @@ from fastapi.testclient import TestClient
 
 from bytecode_review_agent.api import create_app
 from bytecode_review_agent.config import Settings
-from bytecode_review_agent.models import LLMCallResult
+from bytecode_review_agent.models import FileContext, LLMCallResult
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
 from bytecode_review_agent.tools import default_registry
+from bytecode_review_agent.utils import atomic_write_text
 
 
 DIFF = """diff --git a/app.py b/app.py
@@ -164,6 +165,50 @@ class LocalAPITests(unittest.TestCase):
 
             self.assertEqual(response.status_code, 400)
             self.assertIn("REVIEW_AGENT_LLM_API_KEY", response.text)
+
+    def test_context_endpoint_returns_only_run_scoped_sanitized_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = settings_for(root)
+            storage = SQLiteStorage(settings.database_path)
+            app = create_app(
+                settings=settings,
+                service_factory=service_factory,
+                static_dir=root / "missing-static",
+            )
+            diff_path = root / "change.diff"
+            diff_path.write_text(DIFF, encoding="utf-8")
+            service = service_factory(settings, storage)
+            result = service.start(str(diff_path), budget_cny=Decimal("1"))
+            context = FileContext(
+                file_path="app.py",
+                old_path="app.py",
+                new_path="app.py",
+                status="modified",
+                base_content="value = 0\n",
+                head_content="value = 1\n",
+                base_content_sha256="base-hash",
+                head_content_sha256="head-hash",
+            )
+            atomic_write_text(
+                result.run.sanitized_diff_path.with_name("contexts.json"),
+                json.dumps([context.model_dump(mode="json")]),
+            )
+
+            with TestClient(app) as client:
+                base = client.get(
+                    f"/api/runs/{result.run.id}/context",
+                    params={"file_path": "app.py", "side": "base"},
+                )
+                missing = client.get(
+                    f"/api/runs/{result.run.id}/context",
+                    params={"file_path": "../secret.txt", "side": "base"},
+                )
+
+            self.assertEqual(base.status_code, 200)
+            self.assertEqual(base.json()["content"], "value = 0\n")
+            self.assertEqual(base.json()["content_sha256"], "base-hash")
+            self.assertEqual(missing.status_code, 404)
 
     def test_background_review_exposes_run_findings_and_trace(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

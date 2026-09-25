@@ -94,6 +94,7 @@ GET  /api/config
 GET  /api/tools
 GET  /api/runs
 GET  /api/runs/{run_id}
+GET  /api/runs/{run_id}/context
 GET  /api/traces/{trace_id}
 GET  /api/jobs/{job_id}
 POST /api/reviews

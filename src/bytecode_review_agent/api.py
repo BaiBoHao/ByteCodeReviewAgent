@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -22,6 +23,7 @@ from bytecode_review_agent import __version__
 from bytecode_review_agent.config import Settings
 from bytecode_review_agent.errors import ConfigurationError, RunNotFound
 from bytecode_review_agent.llm import OpenAICompatibleReviewer
+from bytecode_review_agent.models import FileContext
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
@@ -325,6 +327,57 @@ def create_app(
                 path = Path(str(trace[key]))
                 trace[f"{key}_content"] = path.read_text(encoding="utf-8")
         return trace
+
+    @app.get("/api/runs/{run_id}/context")
+    def run_context(
+        run_id: str,
+        file_path: str = Query(min_length=1, max_length=2_048),
+        side: Literal["base", "head"] = "base",
+    ) -> dict[str, object]:
+        try:
+            run = storage.get_run(run_id)
+        except RunNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        context_path = run.sanitized_diff_path.with_name("contexts.json")
+        if not context_path.is_file():
+            raise HTTPException(status_code=404, detail="context artifact not found")
+        try:
+            contexts = [
+                FileContext.model_validate(item)
+                for item in json.loads(context_path.read_text(encoding="utf-8"))
+            ]
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail="context artifact is invalid") from exc
+        normalized = file_path.replace("\\", "/")
+        selected = next(
+            (
+                item
+                for item in contexts
+                if normalized
+                in {
+                    item.file_path.replace("\\", "/"),
+                    item.old_path.replace("\\", "/"),
+                    item.new_path.replace("\\", "/"),
+                }
+            ),
+            None,
+        )
+        if selected is None:
+            raise HTTPException(status_code=404, detail="file context not found")
+        content = selected.base_content if side == "base" else selected.head_content
+        if content is None:
+            raise HTTPException(status_code=404, detail=f"{side} context is unavailable")
+        return {
+            "run_id": run_id,
+            "file_path": normalized,
+            "side": side,
+            "content": content,
+            "content_sha256": (
+                selected.base_content_sha256
+                if side == "base"
+                else selected.head_content_sha256
+            ),
+        }
 
     @app.post("/api/reviews", status_code=202)
     def create_review(request: ReviewCreateRequest) -> dict[str, object]:
