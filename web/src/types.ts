@@ -27,6 +27,7 @@ export interface RunRecord {
   total_chunks: number;
   budget_cny: string;
   spent_cny: string;
+  config: Record<string, unknown>;
   error: string | null;
   created_at: string;
   updated_at: string;

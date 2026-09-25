@@ -2,7 +2,7 @@
 
 - Root: `E:\ByteCodeReviewAgent`
 - Main branch: `main`
-- Active implementation branch: `codex/phase-one-backend-cli`
+- Active implementation branch: `codex/context-aware-review`
 
 # Reading Rules
 
@@ -19,3 +19,4 @@
 - [CLI 本地配置与节点提交](20260925T112918-cli-config-and-release-node.md) - 新增 `.env`、`--env-file` 与脱敏 `doctor` 检查，22 项测试通过，准备提交并推送阶段分支。
 - [阶段分支已推送](20260925T113048-stage-branch-pushed.md) - `codex/phase-one-backend-cli` 已保留完整提交历史推送至 GitHub，未合并主分支。
 - [本地 API 与 Web 界面](20260925T133635-local-api-web-ui.md) - FastAPI、本地后台任务、React/Ant Design 页面、26 项测试和 Playwright 视觉验收完成。
+- [base/head 完整文件与函数级上下文](20260925T134750-base-head-context.md) - GitHub/GitLab 完整文件、Python AST 上下文、脱敏恢复制品和 Trace 哈希完成，29 项测试通过。

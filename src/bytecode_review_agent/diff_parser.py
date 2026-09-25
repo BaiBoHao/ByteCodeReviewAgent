@@ -48,24 +48,31 @@ def split_file_patches(diff: str) -> list[_FilePatch]:
     return patches
 
 
-def _added_lines(content: str) -> set[int]:
-    result: set[int] = set()
+def _changed_lines(content: str) -> tuple[set[int], set[int]]:
+    added: set[int] = set()
+    removed: set[int] = set()
+    old_line: int | None = None
     new_line: int | None = None
     for line in content.splitlines():
-        match = _HUNK_HEADER.match(line)
+        match = re.match(
+            r"^@@\s+-(\d+)(?:,\d+)?\s+\+(\d+)(?:,\d+)?\s+@@", line
+        )
         if match:
-            new_line = int(match.group(1))
+            old_line = int(match.group(1))
+            new_line = int(match.group(2))
             continue
-        if new_line is None:
+        if old_line is None or new_line is None:
             continue
         if line.startswith("+") and not line.startswith("+++"):
-            result.add(new_line)
+            added.add(new_line)
             new_line += 1
         elif line.startswith("-") and not line.startswith("---"):
-            continue
+            removed.add(old_line)
+            old_line += 1
         elif not line.startswith("\\"):
+            old_line += 1
             new_line += 1
-    return result
+    return added, removed
 
 
 def _split_large_patch(patch: _FilePatch, max_chars: int) -> list[str]:
@@ -171,12 +178,14 @@ def chunk_diff(diff: str, max_chars: int) -> list[DiffChunk]:
     chunks: list[DiffChunk] = []
     for patch in split_file_patches(diff):
         for content in _split_large_patch(patch, max_chars):
+            added_lines, removed_lines = _changed_lines(content)
             chunks.append(
                 DiffChunk(
                     index=len(chunks),
                     file_path=patch.path,
                     content=content,
-                    added_lines=_added_lines(content),
+                    added_lines=added_lines,
+                    removed_lines=removed_lines,
                 )
             )
     return chunks

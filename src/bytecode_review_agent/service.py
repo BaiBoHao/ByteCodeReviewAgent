@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
 from bytecode_review_agent.budget import BudgetGuard, Pricing
 from bytecode_review_agent.config import Settings
+from bytecode_review_agent.context import SelectedContext, select_context
 from bytecode_review_agent.diff_parser import chunk_diff
 from bytecode_review_agent.errors import (
     BudgetExceeded,
@@ -21,8 +23,10 @@ from bytecode_review_agent.models import (
     Disposition,
     Finding,
     FindingDraft,
+    FileContext,
     ReviewResult,
     RunStatus,
+    ToolObservation,
     TraceRecord,
 )
 from bytecode_review_agent.prompts import SYSTEM_PROMPT, build_user_prompt, trace_prompt
@@ -73,13 +77,39 @@ class ReviewService:
         run_dir = self.settings.artifacts_dir / run_id
         raw_path = run_dir / "raw.diff"
         sanitized_path = run_dir / "sanitized.diff"
+        contexts_path = run_dir / "contexts.json"
         sanitized, redaction_count = self.redactor.redact(source.diff)
+        sanitized_contexts: list[FileContext] = []
+        for context in source.file_contexts:
+            base_content = context.base_content
+            head_content = context.head_content
+            if base_content is not None:
+                base_content, matches = self.redactor.redact(base_content)
+                redaction_count += matches
+            if head_content is not None:
+                head_content, matches = self.redactor.redact(head_content)
+                redaction_count += matches
+            sanitized_contexts.append(
+                context.model_copy(
+                    update={
+                        "base_content": base_content,
+                        "head_content": head_content,
+                    }
+                )
+            )
         chunks = chunk_diff(sanitized, self.settings.max_chunk_chars)
         if not chunks:
             raise SourceError("no reviewable text was found in the diff")
 
         atomic_write_text(raw_path, source.diff)
         atomic_write_text(sanitized_path, sanitized)
+        atomic_write_text(
+            contexts_path,
+            json.dumps(
+                [item.model_dump(mode="json") for item in sanitized_contexts],
+                ensure_ascii=False,
+            ),
+        )
         self.storage.create_run(
             run_id=run_id,
             source=source,
@@ -96,6 +126,8 @@ class ReviewService:
                 "max_output_tokens": self.settings.max_output_tokens,
                 "enabled_tools": list(self.settings.enabled_tools),
                 "redaction_count": redaction_count,
+                "context_file_count": len(sanitized_contexts),
+                "max_context_chars": self.settings.max_context_chars,
             },
         )
         self.storage.checkpoint(
@@ -111,6 +143,14 @@ class ReviewService:
             run_id,
             "secrets_redacted",
             payload={"redaction_count": redaction_count},
+        )
+        self.storage.checkpoint(
+            run_id,
+            "context_loaded",
+            payload={
+                "file_count": len(sanitized_contexts),
+                "artifact_path": str(contexts_path.resolve()),
+            },
         )
         self.storage.checkpoint(run_id, "diff_chunked", payload={"chunks": len(chunks)})
         return self._execute(run_id, output_path=output_path)
@@ -150,6 +190,17 @@ class ReviewService:
         run = self.storage.get_run(run_id)
         try:
             sanitized = run.sanitized_diff_path.read_text(encoding="utf-8")
+            context_path = run.sanitized_diff_path.with_name("contexts.json")
+            if context_path.is_file():
+                raw_contexts = json.loads(context_path.read_text(encoding="utf-8"))
+                contexts = [FileContext.model_validate(item) for item in raw_contexts]
+            else:
+                contexts = []
+            contexts_by_path = {
+                path: context
+                for context in contexts
+                for path in {context.file_path, context.old_path, context.new_path}
+            }
             max_chars = int(run.config["max_chunk_chars"])
             chunks = chunk_diff(sanitized, max_chars)
             if len(chunks) != run.total_chunks:
@@ -159,7 +210,16 @@ class ReviewService:
                 run = self.storage.get_run(run_id)
                 self.storage.mark_running(run_id, chunk.index)
                 observations = self.tools.run(self.settings.enabled_tools, chunk)
-                user_prompt = build_user_prompt(chunk, observations)
+                selected_context = select_context(
+                    chunk,
+                    contexts_by_path.get(chunk.file_path),
+                    max_chars=int(
+                        run.config.get("max_context_chars", self.settings.max_context_chars)
+                    ),
+                )
+                if selected_context:
+                    observations.append(self._context_observation(selected_context))
+                user_prompt = build_user_prompt(chunk, observations, selected_context)
                 complete_prompt = trace_prompt(SYSTEM_PROMPT, user_prompt)
                 max_output = int(run.config["max_output_tokens"])
                 BudgetGuard(run.budget_cny, run.spent_cny, self.pricing).reserve(
@@ -256,6 +316,23 @@ class ReviewService:
             disposition=disposition,
             evidence=draft.evidence,
             fingerprint=fingerprint,
+        )
+
+    def _context_observation(self, context: SelectedContext) -> ToolObservation:
+        return ToolObservation(
+            tool="context_selector",
+            summary=(
+                f"selected {context.strategy} context with "
+                f"{len(context.symbols)} symbols"
+            ),
+            data={
+                "strategy": context.strategy,
+                "symbols": context.symbols,
+                "base_ranges": context.base_ranges,
+                "head_ranges": context.head_ranges,
+                "base_content_sha256": context.base_content_sha256,
+                "head_content_sha256": context.head_content_sha256,
+            },
         )
 
     def _result(self, run_id: str, output_path: Path | None) -> ReviewResult:

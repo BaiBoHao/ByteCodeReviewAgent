@@ -9,7 +9,13 @@ from pathlib import Path
 from bytecode_review_agent.config import Settings
 from bytecode_review_agent.errors import ModelResponseError, RunExecutionError
 from bytecode_review_agent.llm import ReviewerClient
-from bytecode_review_agent.models import LLMCallResult, RunStatus
+from bytecode_review_agent.models import (
+    FileContext,
+    LLMCallResult,
+    RunStatus,
+    SourceKind,
+    SourceSnapshot,
+)
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
@@ -74,6 +80,35 @@ class FakeReviewer(ReviewerClient):
         )
 
 
+class ContextSourceLoader:
+    def load(self, source: str, stdin_text: str | None = None) -> SourceSnapshot:
+        base_content = """def execute(user_input):
+    return user_input
+"""
+        head_content = """def execute(user_input):
+    password = "context-secret-value"
+    return eval(user_input)
+"""
+        return SourceSnapshot(
+            kind=SourceKind.GITHUB,
+            reference=source,
+            provider="github",
+            diff=DIFF,
+            file_contexts=[
+                FileContext(
+                    file_path="app.py",
+                    old_path="app.py",
+                    new_path="app.py",
+                    status="modified",
+                    base_commit_sha="base",
+                    head_commit_sha="head",
+                    base_content=base_content,
+                    head_content=head_content,
+                )
+            ],
+        )
+
+
 def make_settings(path: Path, *, input_price: str = "1", output_price: str = "2") -> Settings:
     return Settings(
         data_dir=path / ".review-agent",
@@ -99,6 +134,39 @@ def make_service(path: Path, reviewer: FakeReviewer, settings: Settings) -> Revi
 
 
 class ReviewServiceTests(unittest.TestCase):
+    def test_full_file_context_is_redacted_selected_and_traced(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = make_settings(root)
+            reviewer = FakeReviewer()
+            storage = SQLiteStorage(settings.database_path)
+            service = ReviewService(
+                settings=settings,
+                reviewer=reviewer,
+                storage=storage,
+                sources=ContextSourceLoader(),  # type: ignore[arg-type]
+                tools=default_registry(load_plugins=False),
+            )
+
+            result = service.start(
+                "https://github.com/example/project/pull/1",
+                budget_cny=Decimal("1"),
+            )
+
+            self.assertIn("<UNTRUSTED_BASE_CONTEXT>", reviewer.prompts[0])
+            self.assertIn("<UNTRUSTED_HEAD_CONTEXT>", reviewer.prompts[0])
+            self.assertIn("[REDACTED_SECRET]", reviewer.prompts[0])
+            self.assertNotIn("context-secret-value", reviewer.prompts[0])
+            trace = storage.get_trace(result.findings[0].trace_id)
+            tool_names = {tool["tool"] for tool in trace["tools"]}
+            self.assertIn("context_selector", tool_names)
+            context_artifact = result.run.sanitized_diff_path.with_name("contexts.json")
+            self.assertTrue(context_artifact.is_file())
+            self.assertNotIn(
+                "context-secret-value",
+                context_artifact.read_text(encoding="utf-8"),
+            )
+
     def test_review_redacts_model_input_and_writes_traceable_report(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

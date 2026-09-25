@@ -513,6 +513,12 @@ function RunDrawer({
             <Descriptions.Item label="费用">
               {detail.run.spent_cny} / {detail.run.budget_cny} CNY
             </Descriptions.Item>
+            <Descriptions.Item label="上下文文件">
+              {String(detail.run.config.context_file_count ?? 0)}
+            </Descriptions.Item>
+            <Descriptions.Item label="上下文上限">
+              {String(detail.run.config.max_context_chars ?? "--")} 字符
+            </Descriptions.Item>
             <Descriptions.Item label="来源" span={2}>
               {detail.run.source_ref}
             </Descriptions.Item>

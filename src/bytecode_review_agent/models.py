@@ -45,6 +45,20 @@ class SourceSnapshot(BaseModel):
     provider: str
     diff: str
     metadata: dict[str, str | int | bool | None] = Field(default_factory=dict)
+    file_contexts: list[FileContext] = Field(default_factory=list)
+
+
+class FileContext(BaseModel):
+    file_path: str
+    old_path: str
+    new_path: str
+    status: str
+    base_commit_sha: str | None = None
+    head_commit_sha: str | None = None
+    base_content: str | None = None
+    head_content: str | None = None
+    base_content_sha256: str | None = None
+    head_content_sha256: str | None = None
 
 
 class DiffChunk(BaseModel):
@@ -52,6 +66,7 @@ class DiffChunk(BaseModel):
     file_path: str
     content: str
     added_lines: set[int] = Field(default_factory=set)
+    removed_lines: set[int] = Field(default_factory=set)
 
 
 class ToolObservation(BaseModel):

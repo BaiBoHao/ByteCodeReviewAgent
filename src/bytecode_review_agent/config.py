@@ -65,6 +65,9 @@ class Settings:
     max_diff_bytes: int = 512_000
     max_chunk_chars: int = 12_000
     max_output_tokens: int = 1_200
+    max_context_files: int = 30
+    max_context_file_bytes: int = 200_000
+    max_context_chars: int = 16_000
     request_timeout_seconds: float = 60.0
     enabled_tools: tuple[str, ...] = ("diff_stats", "risk_patterns")
     env_file_path: Path | None = None
@@ -122,6 +125,13 @@ class Settings:
             max_diff_bytes=int(value("REVIEW_AGENT_MAX_DIFF_BYTES", "512000") or "512000"),
             max_chunk_chars=int(value("REVIEW_AGENT_MAX_CHUNK_CHARS", "12000") or "12000"),
             max_output_tokens=int(value("REVIEW_AGENT_MAX_OUTPUT_TOKENS", "1200") or "1200"),
+            max_context_files=int(value("REVIEW_AGENT_MAX_CONTEXT_FILES", "30") or "30"),
+            max_context_file_bytes=int(
+                value("REVIEW_AGENT_MAX_CONTEXT_FILE_BYTES", "200000") or "200000"
+            ),
+            max_context_chars=int(
+                value("REVIEW_AGENT_MAX_CONTEXT_CHARS", "16000") or "16000"
+            ),
             request_timeout_seconds=float(
                 value("REVIEW_AGENT_REQUEST_TIMEOUT_SECONDS", "60") or "60"
             ),
