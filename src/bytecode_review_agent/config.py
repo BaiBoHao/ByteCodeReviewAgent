@@ -68,6 +68,7 @@ class Settings:
     max_context_files: int = 30
     max_context_file_bytes: int = 200_000
     max_context_chars: int = 16_000
+    max_publish_comments: int = 20
     request_timeout_seconds: float = 60.0
     enabled_tools: tuple[str, ...] = ("diff_stats", "risk_patterns")
     env_file_path: Path | None = None
@@ -131,6 +132,9 @@ class Settings:
             ),
             max_context_chars=int(
                 value("REVIEW_AGENT_MAX_CONTEXT_CHARS", "16000") or "16000"
+            ),
+            max_publish_comments=int(
+                value("REVIEW_AGENT_MAX_PUBLISH_COMMENTS", "20") or "20"
             ),
             request_timeout_seconds=float(
                 value("REVIEW_AGENT_REQUEST_TIMEOUT_SECONDS", "60") or "60"

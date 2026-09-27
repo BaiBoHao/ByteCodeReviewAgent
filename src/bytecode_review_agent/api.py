@@ -23,10 +23,11 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from bytecode_review_agent import __version__
 from bytecode_review_agent.config import Settings
-from bytecode_review_agent.errors import ConfigurationError, RunNotFound
+from bytecode_review_agent.errors import ConfigurationError, PublicationError, RunNotFound
 from bytecode_review_agent.llm import OpenAICompatibleReviewer
 from bytecode_review_agent.models import FileContext
 from bytecode_review_agent.providers import SourceLoader
+from bytecode_review_agent.publisher import GitHubCommentPublisher
 from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
 from bytecode_review_agent.tools import default_registry
@@ -57,6 +58,10 @@ class ReviewResumeRequest(BaseModel):
 
 class PairRequest(BaseModel):
     code: str = Field(min_length=8, max_length=32)
+
+
+class PublishRunRequest(BaseModel):
+    apply: bool = False
 
 
 @dataclass(slots=True)
@@ -321,6 +326,7 @@ def create_app(
             "model": active_settings.llm_model,
             "base_url": active_settings.llm_base_url,
             "api_key_configured": bool(active_settings.llm_api_key),
+            "github_token_configured": bool(active_settings.github_token),
             "pairing_code": pairing_code,
             "input_price_cny_per_million": str(
                 active_settings.input_price_cny_per_million
@@ -357,6 +363,26 @@ def create_app(
             "checkpoints": storage.list_checkpoints(run_id),
             "traces": storage.list_traces(run_id),
         }
+
+    @app.post("/api/runs/{run_id}/publish")
+    def publish_run(run_id: str, request: PublishRunRequest) -> dict[str, object]:
+        publisher: GitHubCommentPublisher | None = None
+        try:
+            run = storage.get_run(run_id)
+            publisher = GitHubCommentPublisher(active_settings)
+            result = publisher.publish(
+                run,
+                storage.list_findings(run_id),
+                apply=request.apply,
+            )
+            return result.model_dump(mode="json")
+        except RunNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except (ConfigurationError, PublicationError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        finally:
+            if publisher is not None:
+                publisher.close()
 
     @app.get("/api/traces/{trace_id}")
     def trace_detail(trace_id: str, include_content: bool = False) -> dict[str, object]:

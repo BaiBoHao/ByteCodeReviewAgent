@@ -11,6 +11,7 @@ from bytecode_review_agent import __version__
 from bytecode_review_agent.config import Settings
 from bytecode_review_agent.errors import ConfigurationError, ReviewAgentError
 from bytecode_review_agent.llm import OpenAICompatibleReviewer
+from bytecode_review_agent.publisher import GitHubCommentPublisher
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
@@ -203,6 +204,38 @@ def show_run(
         _fail(exc)
 
 
+@app.command("publish")
+def publish_run(
+    run_id: str = typer.Argument(..., help="Completed GitHub review run ID."),
+    apply: bool = typer.Option(
+        False,
+        "--apply",
+        help="Create or update GitHub comments. Omit for a safe dry-run preview.",
+    ),
+    data_dir: Path = typer.Option(Path(".review-agent"), "--data-dir"),
+    env_file: Optional[Path] = typer.Option(None, "--env-file"),
+) -> None:
+    """Preview or idempotently publish high-confidence findings to a GitHub PR."""
+    publisher: GitHubCommentPublisher | None = None
+    try:
+        settings = Settings.from_env(data_dir=data_dir, env_file=env_file)
+        storage = SQLiteStorage(settings.database_path)
+        run = storage.get_run(run_id)
+        publisher = GitHubCommentPublisher(settings)
+        result = publisher.publish(run, storage.list_findings(run_id), apply=apply)
+        typer.echo(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        if not apply:
+            typer.secho(
+                "Dry run only. Re-run with --apply to write GitHub comments.",
+                fg=typer.colors.YELLOW,
+            )
+    except (ReviewAgentError, OSError, ValueError) as exc:
+        _fail(exc)
+    finally:
+        if publisher is not None:
+            publisher.close()
+
+
 @app.command("tools")
 def list_tools() -> None:
     """List built-in and installed declarative review tools."""
@@ -224,6 +257,10 @@ def doctor(
         typer.echo(f"模型地址: {settings.llm_base_url}")
         typer.echo(f"模型名称: {settings.llm_model or '未配置'}")
         typer.echo(f"API Key: {'已配置' if settings.llm_api_key else '未配置'}")
+        typer.echo(
+            f"GitHub 发布 Token: {'已配置' if settings.github_token else '未配置'}"
+        )
+        typer.echo(f"单次最大发布评论数: {settings.max_publish_comments}")
         typer.echo(
             "输入价格: "
             f"{settings.input_price_cny_per_million} CNY / 1M tokens"

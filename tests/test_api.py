@@ -11,7 +11,13 @@ from fastapi.testclient import TestClient
 
 from bytecode_review_agent.api import create_app
 from bytecode_review_agent.config import Settings
-from bytecode_review_agent.models import FileContext, LLMCallResult
+from bytecode_review_agent.models import (
+    FileContext,
+    LLMCallResult,
+    RunStatus,
+    SourceKind,
+    SourceSnapshot,
+)
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.service import ReviewService
 from bytecode_review_agent.storage import SQLiteStorage
@@ -237,6 +243,48 @@ class LocalAPITests(unittest.TestCase):
             self.assertEqual(base.json()["content"], "value = 0\n")
             self.assertEqual(base.json()["content_sha256"], "base-hash")
             self.assertEqual(missing.status_code, 404)
+
+    def test_publish_endpoint_defaults_to_safe_dry_run(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = settings_for(root)
+            storage = SQLiteStorage(settings.database_path)
+            run_id = "run_publish_api"
+            storage.create_run(
+                run_id=run_id,
+                source=SourceSnapshot(
+                    kind=SourceKind.GITHUB,
+                    reference="https://github.com/acme/project/pull/7",
+                    provider="github",
+                    diff=DIFF,
+                    metadata={"head_sha": "head-reviewed"},
+                ),
+                diff_sha256="a" * 64,
+                raw_diff_path=root / "raw.diff",
+                sanitized_diff_path=root / "sanitized.diff",
+                total_chunks=1,
+                budget_cny=Decimal("1"),
+                config={"source_metadata": {"head_sha": "head-reviewed"}},
+            )
+            storage.mark_terminal(run_id, RunStatus.COMPLETED)
+            app = create_app(
+                settings=settings,
+                service_factory=service_factory,
+                static_dir=root / "missing-static",
+            )
+
+            with TestClient(app) as client:
+                preview = client.post(f"/api/runs/{run_id}/publish", json={})
+                apply = client.post(
+                    f"/api/runs/{run_id}/publish",
+                    json={"apply": True},
+                )
+
+            self.assertEqual(preview.status_code, 200, preview.text)
+            self.assertTrue(preview.json()["dry_run"])
+            self.assertEqual(preview.json()["eligible_count"], 0)
+            self.assertEqual(apply.status_code, 400)
+            self.assertIn("GITHUB_TOKEN", apply.text)
 
     def test_background_review_exposes_run_findings_and_trace(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

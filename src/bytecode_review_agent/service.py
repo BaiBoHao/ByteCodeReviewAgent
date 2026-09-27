@@ -129,6 +129,7 @@ class ReviewService:
                 "redaction_count": redaction_count,
                 "context_file_count": len(sanitized_contexts),
                 "max_context_chars": self.settings.max_context_chars,
+                "source_metadata": source.metadata,
             },
         )
         self.storage.checkpoint(

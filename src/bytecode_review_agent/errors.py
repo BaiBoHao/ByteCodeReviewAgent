@@ -18,6 +18,10 @@ class ModelResponseError(ReviewAgentError):
     """Raised when the model response is unavailable or malformed."""
 
 
+class PublicationError(ReviewAgentError):
+    """Raised when review findings cannot be safely published."""
+
+
 class RunNotFound(ReviewAgentError):
     """Raised when a requested run does not exist."""
 
