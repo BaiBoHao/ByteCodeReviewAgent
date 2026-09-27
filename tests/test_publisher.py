@@ -41,7 +41,11 @@ def settings_for(root: Path, token: str | None = "github-test-token") -> Setting
     )
 
 
-def run_record(*, head_sha: str = "head-reviewed") -> RunRecord:
+def run_record(
+    *,
+    head_sha: str = "head-reviewed",
+    output_language: str = "zh-CN",
+) -> RunRecord:
     return RunRecord(
         id="run_publish_test",
         status=RunStatus.COMPLETED,
@@ -55,7 +59,10 @@ def run_record(*, head_sha: str = "head-reviewed") -> RunRecord:
         total_chunks=1,
         budget_cny=Decimal("10"),
         spent_cny=Decimal("1"),
-        config={"source_metadata": {"head_sha": head_sha}},
+        config={
+            "source_metadata": {"head_sha": head_sha},
+            "output_language": output_language,
+        },
         created_at="2026-09-27T00:00:00+00:00",
         updated_at="2026-09-27T00:00:01+00:00",
     )
@@ -92,6 +99,21 @@ def finding(
 
 
 class GitHubCommentPublisherTests(unittest.TestCase):
+    def test_comment_labels_follow_review_output_language(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            result = GitHubCommentPublisher(
+                settings_for(Path(directory), token=None),
+                client=httpx.Client(
+                    transport=httpx.MockTransport(
+                        lambda _: (_ for _ in ()).throw(AssertionError("unexpected network"))
+                    )
+                ),
+            ).publish(run_record(output_language="en-US"), [finding(1)])
+
+        self.assertIn("**Suggestion**", result.comments[0].body)
+        self.assertIn("**Evidence**", result.comments[0].body)
+        self.assertNotIn("**建议**", result.comments[0].body)
+
     def test_cli_publish_is_a_dry_run_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

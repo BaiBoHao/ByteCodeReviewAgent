@@ -50,6 +50,7 @@ def _now() -> str:
 class ReviewCreateRequest(BaseModel):
     source: str = Field(min_length=1, max_length=2_048)
     budget_cny: Decimal = Field(default=Decimal("10"), gt=0)
+    language: Literal["zh-CN", "en-US"] = "zh-CN"
 
 
 class ReviewResumeRequest(BaseModel):
@@ -85,6 +86,7 @@ def _default_service(settings: Settings, storage: SQLiteStorage) -> ReviewServic
         api_key=settings.llm_api_key or "",
         model=settings.llm_model or "",
         timeout_seconds=settings.request_timeout_seconds,
+        thinking=settings.llm_thinking,
     )
     return ReviewService(
         settings=settings,
@@ -186,6 +188,7 @@ class JobManager:
                 budget_cny=request.budget_cny,
                 output_path=report_path,
                 run_id=job.run_id,
+                output_language=request.language,
             )
         except Exception as exc:  # The job endpoint exposes the persisted failure safely.
             self._set_status(job_id, "failed", str(exc))
@@ -324,6 +327,7 @@ def create_app(
             if active_settings.env_file_path
             else None,
             "model": active_settings.llm_model,
+            "thinking": active_settings.llm_thinking,
             "base_url": active_settings.llm_base_url,
             "api_key_configured": bool(active_settings.llm_api_key),
             "github_token_configured": bool(active_settings.github_token),

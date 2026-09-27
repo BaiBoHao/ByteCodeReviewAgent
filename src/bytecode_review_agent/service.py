@@ -30,7 +30,7 @@ from bytecode_review_agent.models import (
     ToolObservation,
     TraceRecord,
 )
-from bytecode_review_agent.prompts import SYSTEM_PROMPT, build_user_prompt, trace_prompt
+from bytecode_review_agent.prompts import build_user_prompt, system_prompt_for, trace_prompt
 from bytecode_review_agent.providers import SourceLoader
 from bytecode_review_agent.report import MarkdownReporter
 from bytecode_review_agent.security import SecretRedactor
@@ -70,9 +70,12 @@ class ReviewService:
         output_path: Path | None = None,
         stdin_text: str | None = None,
         run_id: str | None = None,
+        output_language: str = "zh-CN",
     ) -> ReviewResult:
         if budget_cny <= 0:
             raise SourceError("budget must be greater than zero")
+        if output_language not in {"zh-CN", "en-US"}:
+            raise SourceError("output language must be zh-CN or en-US")
         source = self.sources.load(source_value, stdin_text=stdin_text)
         run_id = run_id or f"run_{uuid4().hex[:16]}"
         run_dir = self.settings.artifacts_dir / run_id
@@ -121,6 +124,7 @@ class ReviewService:
             budget_cny=budget_cny,
             config={
                 "model": self.reviewer.model,
+                "thinking": self.settings.llm_thinking,
                 "input_price_cny_per_million": str(self.pricing.input_cny_per_million),
                 "output_price_cny_per_million": str(self.pricing.output_cny_per_million),
                 "max_chunk_chars": self.settings.max_chunk_chars,
@@ -130,6 +134,7 @@ class ReviewService:
                 "context_file_count": len(sanitized_contexts),
                 "max_context_chars": self.settings.max_context_chars,
                 "source_metadata": source.metadata,
+                "output_language": output_language,
             },
         )
         self.storage.checkpoint(
@@ -221,8 +226,11 @@ class ReviewService:
                 )
                 if selected_context:
                     observations.append(self._context_observation(selected_context))
+                system_prompt = system_prompt_for(
+                    str(run.config.get("output_language") or "zh-CN")
+                )
                 user_prompt = build_user_prompt(chunk, observations, selected_context)
-                complete_prompt = trace_prompt(SYSTEM_PROMPT, user_prompt)
+                complete_prompt = trace_prompt(system_prompt, user_prompt)
                 max_output = int(run.config["max_output_tokens"])
                 BudgetGuard(run.budget_cny, run.spent_cny, self.pricing).reserve(
                     estimate_tokens(complete_prompt), max_output
@@ -233,7 +241,7 @@ class ReviewService:
                 prompt_path = run_dir / f"{trace_id}.prompt.txt"
                 response_path = run_dir / f"{trace_id}.response.json"
                 atomic_write_text(prompt_path, complete_prompt)
-                call = self.reviewer.review(SYSTEM_PROMPT, user_prompt, max_output)
+                call = self.reviewer.review(system_prompt, user_prompt, max_output)
                 atomic_write_text(response_path, call.content)
                 cost = self.pricing.cost(call.input_tokens, call.output_tokens)
                 trace = TraceRecord(

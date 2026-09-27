@@ -28,11 +28,13 @@ class OpenAICompatibleReviewer:
         api_key: str,
         model: str,
         timeout_seconds: float,
+        thinking: str | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.thinking = thinking
 
     def review(
         self, system_prompt: str, user_prompt: str, max_output_tokens: int
@@ -47,6 +49,8 @@ class OpenAICompatibleReviewer:
             "max_tokens": max_output_tokens,
             "response_format": {"type": "json_object"},
         }
+        if self.thinking is not None:
+            payload["thinking"] = {"type": self.thinking}
         try:
             response = httpx.post(
                 f"{self.base_url}/chat/completions",

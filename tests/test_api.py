@@ -200,6 +200,26 @@ class LocalAPITests(unittest.TestCase):
             self.assertEqual(response.status_code, 400)
             self.assertIn("REVIEW_AGENT_LLM_API_KEY", response.text)
 
+    def test_review_language_is_validated(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = create_app(
+                settings=settings_for(root),
+                service_factory=service_factory,
+                static_dir=root / "missing-static",
+            )
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/reviews",
+                    json={
+                        "source": "change.diff",
+                        "budget_cny": "1",
+                        "language": "fr-FR",
+                    },
+                )
+
+            self.assertEqual(response.status_code, 422)
+
     def test_context_endpoint_returns_only_run_scoped_sanitized_content(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

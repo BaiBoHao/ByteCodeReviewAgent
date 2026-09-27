@@ -100,6 +100,7 @@ class CLIIntegrationTests(unittest.TestCase):
                 "REVIEW_AGENT_LLM_BASE_URL": base_url,
                 "REVIEW_AGENT_LLM_API_KEY": "integration-test-key",
                 "REVIEW_AGENT_LLM_MODEL": "mock-review-model",
+                "REVIEW_AGENT_LLM_THINKING": "disabled",
                 "REVIEW_AGENT_INPUT_PRICE_CNY_PER_MILLION": "1",
                 "REVIEW_AGENT_OUTPUT_PRICE_CNY_PER_MILLION": "2",
             }
@@ -130,10 +131,13 @@ class CLIIntegrationTests(unittest.TestCase):
             self.assertEqual(request["authorization"], "Bearer integration-test-key")
             payload = request["payload"]
             self.assertIsInstance(payload, dict)
+            system_prompt = payload["messages"][0]["content"]
             user_prompt = payload["messages"][1]["content"]
+            self.assertIn("Simplified Chinese", system_prompt)
             self.assertNotIn("cli-integration-secret", user_prompt)
             self.assertIn("[REDACTED_SECRET]", user_prompt)
             self.assertEqual(payload["response_format"], {"type": "json_object"})
+            self.assertEqual(payload["thinking"], {"type": "disabled"})
 
             storage = SQLiteStorage(data_dir / "agent.sqlite3")
             run = storage.list_runs(limit=1)[0]

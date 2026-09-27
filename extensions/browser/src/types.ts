@@ -16,6 +16,7 @@ export interface RunRecord {
   budget_cny: string;
   updated_at: string;
   config: {
+    output_language?: "zh-CN" | "en-US";
     source_metadata?: {
       head_sha?: string;
     };

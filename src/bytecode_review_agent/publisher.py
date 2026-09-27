@@ -107,16 +107,18 @@ def _marker(fingerprint: str) -> str:
     return f"<!-- bytecode-review-agent:finding:{fingerprint} -->"
 
 
-def _comment_body(finding: Finding) -> str:
+def _comment_body(finding: Finding, output_language: str) -> str:
+    suggestion_label = "Suggestion" if output_language == "en-US" else "建议"
+    evidence_label = "Evidence" if output_language == "en-US" else "证据"
     sections = [
         f"**[{finding.severity.value.upper()}] {finding.title}**",
         finding.explanation,
     ]
     if finding.suggestion:
-        sections.append(f"**建议**\n\n{finding.suggestion}")
+        sections.append(f"**{suggestion_label}**\n\n{finding.suggestion}")
     if finding.evidence:
         evidence = "\n".join(f"- {item}" for item in finding.evidence[:5])
-        sections.append(f"**证据**\n\n{evidence}")
+        sections.append(f"**{evidence_label}**\n\n{evidence}")
     marker = _marker(finding.fingerprint)
     visible = "\n\n".join(sections)
     available = _MAX_COMMENT_BODY_CHARS - len(marker) - 4
@@ -126,7 +128,7 @@ def _comment_body(finding: Finding) -> str:
 
 
 def _eligible_comments(
-    findings: list[Finding], max_comments: int
+    findings: list[Finding], max_comments: int, output_language: str
 ) -> tuple[list[PlannedComment], int]:
     eligible: list[PlannedComment] = []
     skipped = 0
@@ -150,7 +152,7 @@ def _eligible_comments(
                 line=line,
                 side=finding.side,
                 title=finding.title,
-                body=_comment_body(finding),
+                body=_comment_body(finding, output_language),
             )
         )
     return eligible, skipped
@@ -180,6 +182,7 @@ class GitHubCommentPublisher:
         comments, skipped = _eligible_comments(
             findings,
             max(1, self.settings.max_publish_comments),
+            str(run.config.get("output_language") or "zh-CN"),
         )
         result = PublicationResult(
             source_ref=run.source_ref,

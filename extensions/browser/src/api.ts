@@ -56,10 +56,10 @@ export class LocalRunnerApi {
     return this.request(`/api/runs/${runId}`);
   }
 
-  createReview(source: string, budget: number): Promise<ReviewJob> {
+  createReview(source: string, budget: number, language: "zh-CN" | "en-US"): Promise<ReviewJob> {
     return this.request("/api/reviews", {
       method: "POST",
-      body: JSON.stringify({ source, budget_cny: String(budget) }),
+      body: JSON.stringify({ source, budget_cny: String(budget), language }),
     });
   }
 

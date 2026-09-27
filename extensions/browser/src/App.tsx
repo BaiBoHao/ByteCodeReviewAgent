@@ -211,7 +211,7 @@ function SidePanel({ language, onLanguageChange }: SidePanelProps) {
 
   const review = async (values: { source: string; budget: number }) => {
     try {
-      const created = await api.createReview(values.source.trim(), values.budget);
+      const created = await api.createReview(values.source.trim(), values.budget, language);
       setJob(created);
       message.success(t("reviewSubmitted"));
     } catch (error) {

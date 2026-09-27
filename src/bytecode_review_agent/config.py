@@ -62,6 +62,7 @@ class Settings:
     allowed_hosts: tuple[str, ...]
     github_token: str | None
     gitlab_token: str | None
+    llm_thinking: str | None = None
     max_diff_bytes: int = 512_000
     max_chunk_chars: int = 12_000
     max_output_tokens: int = 1_200
@@ -101,6 +102,11 @@ class Settings:
             ).split(",")
             if host.strip()
         )
+        thinking = (value("REVIEW_AGENT_LLM_THINKING", "") or "").strip().lower() or None
+        if thinking not in {None, "enabled", "disabled"}:
+            raise ConfigurationError(
+                "REVIEW_AGENT_LLM_THINKING must be enabled, disabled, or empty"
+            )
         return cls(
             data_dir=(
                 data_dir
@@ -123,6 +129,7 @@ class Settings:
             allowed_hosts=hosts,
             github_token=value("GITHUB_TOKEN"),
             gitlab_token=value("GITLAB_TOKEN"),
+            llm_thinking=thinking,
             max_diff_bytes=int(value("REVIEW_AGENT_MAX_DIFF_BYTES", "512000") or "512000"),
             max_chunk_chars=int(value("REVIEW_AGENT_MAX_CHUNK_CHARS", "12000") or "12000"),
             max_output_tokens=int(value("REVIEW_AGENT_MAX_OUTPUT_TOKENS", "1200") or "1200"),

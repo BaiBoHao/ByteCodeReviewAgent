@@ -17,6 +17,7 @@ ENV_CONTENT = """# 本地测试配置
 REVIEW_AGENT_LLM_BASE_URL=https://model.example/v1
 REVIEW_AGENT_LLM_API_KEY="file-secret-value"
 REVIEW_AGENT_LLM_MODEL=test-model
+REVIEW_AGENT_LLM_THINKING=disabled
 REVIEW_AGENT_INPUT_PRICE_CNY_PER_MILLION=2
 REVIEW_AGENT_OUTPUT_PRICE_CNY_PER_MILLION=8
 REVIEW_AGENT_ALLOWED_HOSTS=github.com,gitlab.example.com
@@ -37,6 +38,7 @@ class SettingsFileTests(unittest.TestCase):
                 os.chdir(previous_directory)
 
             self.assertEqual(settings.llm_model, "test-model")
+            self.assertEqual(settings.llm_thinking, "disabled")
             self.assertEqual(settings.env_file_path, (root / ".env").resolve())
 
     def test_explicit_env_file_is_loaded(self) -> None:
@@ -71,6 +73,20 @@ class SettingsFileTests(unittest.TestCase):
             missing = Path(directory) / "missing.env"
             with self.assertRaises(ConfigurationError):
                 Settings.from_env(env_file=missing)
+
+    def test_invalid_thinking_mode_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory) / ".env"
+            env_file.write_text(
+                ENV_CONTENT.replace(
+                    "REVIEW_AGENT_LLM_THINKING=disabled",
+                    "REVIEW_AGENT_LLM_THINKING=maybe",
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(ConfigurationError, "THINKING"):
+                    Settings.from_env(env_file=env_file)
 
     def test_example_placeholders_are_not_accepted_as_ready(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

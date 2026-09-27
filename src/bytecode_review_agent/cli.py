@@ -33,6 +33,12 @@ def _decimal(value: str, label: str) -> Decimal:
     return parsed
 
 
+def _language(value: str) -> str:
+    if value not in {"zh-CN", "en-US"}:
+        raise typer.BadParameter("language must be zh-CN or en-US")
+    return value
+
+
 def _settings(
     data_dir: Path,
     model: Optional[str],
@@ -64,6 +70,7 @@ def _service(settings: Settings) -> ReviewService:
         api_key=settings.llm_api_key or "",
         model=settings.llm_model or "",
         timeout_seconds=settings.request_timeout_seconds,
+        thinking=settings.llm_thinking,
     )
     storage = SQLiteStorage(settings.database_path)
     return ReviewService(
@@ -92,6 +99,7 @@ def review(
     output_price: Optional[str] = typer.Option(None, "--output-price", help="CNY per 1M tokens."),
     allowed_host: Optional[list[str]] = typer.Option(None, "--allowed-host"),
     env_file: Optional[Path] = typer.Option(None, "--env-file", help="Local environment file."),
+    language: str = typer.Option("zh-CN", "--language", help="zh-CN or en-US."),
 ) -> None:
     """Start a new review run and write a Markdown report."""
     try:
@@ -105,7 +113,10 @@ def review(
             env_file,
         )
         result = _service(settings).start(
-            source, budget_cny=_decimal(budget, "budget"), output_path=output
+            source,
+            budget_cny=_decimal(budget, "budget"),
+            output_path=output,
+            output_language=_language(language),
         )
         typer.secho(f"Run: {result.run.id}", fg=typer.colors.GREEN)
         typer.echo(f"Status: {result.run.status.value}")
@@ -256,6 +267,7 @@ def doctor(
         )
         typer.echo(f"模型地址: {settings.llm_base_url}")
         typer.echo(f"模型名称: {settings.llm_model or '未配置'}")
+        typer.echo(f"模型思考模式: {settings.llm_thinking or '由服务端决定'}")
         typer.echo(f"API Key: {'已配置' if settings.llm_api_key else '未配置'}")
         typer.echo(
             f"GitHub 发布 Token: {'已配置' if settings.github_token else '未配置'}"
