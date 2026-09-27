@@ -3,15 +3,23 @@ export interface ConfigStatus {
   error: string | null;
   model: string | null;
   api_key_configured: boolean;
+  github_token_configured: boolean;
 }
 
 export interface RunRecord {
   id: string;
   status: string;
+  source_kind: "diff" | "github" | "gitlab";
   source_ref: string;
+  provider: string;
   spent_cny: string;
   budget_cny: string;
   updated_at: string;
+  config: {
+    source_metadata?: {
+      head_sha?: string;
+    };
+  };
 }
 
 export interface RunListItem {
@@ -32,6 +40,7 @@ export interface Finding {
   explanation: string;
   suggestion: string;
   disposition: "accept" | "reference";
+  effective_confidence: "high" | "medium" | "low";
 }
 
 export interface RunDetail {
@@ -44,4 +53,30 @@ export interface ReviewJob {
   run_id: string;
   status: "queued" | "running" | "completed" | "failed";
   error: string | null;
+}
+
+export interface PlannedComment {
+  finding_id: string;
+  fingerprint: string;
+  path: string;
+  line: number;
+  side: "LEFT" | "RIGHT";
+  title: string;
+  body: string;
+  action: "preview" | "create" | "update" | "unchanged";
+  remote_comment_id: number | null;
+  remote_url: string | null;
+}
+
+export interface PublicationResult {
+  provider: "github";
+  source_ref: string;
+  dry_run: boolean;
+  reviewed_head_sha: string;
+  eligible_count: number;
+  skipped_count: number;
+  created_count: number;
+  updated_count: number;
+  unchanged_count: number;
+  comments: PlannedComment[];
 }

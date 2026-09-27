@@ -11,6 +11,8 @@
 - 显示新增侧/删除侧、严重程度、文件和行号。
 - 查看 Trace。
 - 打开 GitHub Files changed 或 GitLab Diffs 页面。
+- 对已完成的 GitHub Run 预览可发布评论、LEFT/RIGHT 侧别和行号。
+- 只有配置 GitHub 写权限 Token 后，用户才能在预览弹窗中明确点击发布。
 
 ## 构建
 
@@ -49,6 +51,8 @@ Runner 终端与本地 Web 页面都会显示 8 位扩展配对码。在 Side Pa
 
 - 扩展不保存模型 API Key。
 - 扩展不读取仓库文件，只读取活动标签页 URL。
+- 评论预览不会访问或写入 GitHub；正式发布由 Runner 使用本地 Token 执行。
+- 正式发布按钮展示通知风险，并要求用户在预览后再次明确点击。
 - 所有评审与 Secret 脱敏由 localhost Runner 执行。
 - 不使用 content script，不依赖 GitHub/GitLab DOM 结构。
 - Host 权限仅覆盖 localhost、GitHub 和 GitLab。

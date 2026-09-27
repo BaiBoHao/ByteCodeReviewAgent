@@ -2,12 +2,14 @@ import {
   ApiOutlined,
   CheckCircleFilled,
   CodeOutlined,
+  CommentOutlined,
   DisconnectOutlined,
   FileSearchOutlined,
   GlobalOutlined,
   LinkOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
+  SendOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -47,7 +49,14 @@ import {
   saveLocal,
   saveSession,
 } from "./storage";
-import type { ConfigStatus, Finding, ReviewJob, RunDetail, RunListItem } from "./types";
+import type {
+  ConfigStatus,
+  Finding,
+  PublicationResult,
+  ReviewJob,
+  RunDetail,
+  RunListItem,
+} from "./types";
 
 const { Title, Paragraph, Text } = Typography;
 const DEFAULT_RUNNER = "http://127.0.0.1:8765";
@@ -119,6 +128,8 @@ function SidePanel({ language, onLanguageChange }: SidePanelProps) {
   const [job, setJob] = useState<ReviewJob | null>(null);
   const [pairing, setPairing] = useState(false);
   const [trace, setTrace] = useState<Record<string, unknown> | null>(null);
+  const [publication, setPublication] = useState<PublicationResult | null>(null);
+  const [publicationLoading, setPublicationLoading] = useState(false);
 
   const api = useMemo(() => new LocalRunnerApi(baseUrl, token), [baseUrl, token]);
 
@@ -207,6 +218,42 @@ function SidePanel({ language, onLanguageChange }: SidePanelProps) {
       message.error(localizedError(language, error));
     }
   };
+
+  const previewPublication = async () => {
+    if (!detail) return;
+    setPublicationLoading(true);
+    try {
+      setPublication(await api.publish(detail.run.id));
+    } catch (error) {
+      message.error(localizedError(language, error));
+    } finally {
+      setPublicationLoading(false);
+    }
+  };
+
+  const applyPublication = async () => {
+    if (!detail) return;
+    setPublicationLoading(true);
+    try {
+      const result = await api.publish(detail.run.id, true);
+      setPublication(result);
+      message.success(
+        `${t("publishComplete")}：${t("created")} ${result.created_count}，`
+          + `${t("updated")} ${result.updated_count}，`
+          + `${t("unchanged")} ${result.unchanged_count}`,
+      );
+    } catch (error) {
+      message.error(localizedError(language, error));
+    } finally {
+      setPublicationLoading(false);
+    }
+  };
+
+  const canPreviewPublication =
+    detail?.run.provider === "github"
+    && detail.run.status === "completed"
+    && detail.run.source_ref === source
+    && Boolean(detail.run.config.source_metadata?.head_sha);
 
   const languageMenu = {
     selectable: true,
@@ -356,9 +403,25 @@ function SidePanel({ language, onLanguageChange }: SidePanelProps) {
           />
         )}
         {supportedReviewUrl(source) && (
-          <Button type="link" icon={<LinkOutlined />} onClick={() => openTab(changesUrl(source))}>
-            {t("openChanges")}
-          </Button>
+          <div className="review-links">
+            <Button
+              type="link"
+              icon={<LinkOutlined />}
+              onClick={() => openTab(changesUrl(source))}
+            >
+              {t("openChanges")}
+            </Button>
+            {canPreviewPublication && (
+              <Button
+                type="link"
+                icon={<CommentOutlined />}
+                loading={publicationLoading}
+                onClick={previewPublication}
+              >
+                {t("previewComments")}
+              </Button>
+            )}
+          </div>
         )}
       </Card>
 
@@ -418,6 +481,82 @@ function SidePanel({ language, onLanguageChange }: SidePanelProps) {
         width={420}
       >
         <pre className="trace-view">{trace ? JSON.stringify(trace, null, 2) : ""}</pre>
+      </Modal>
+
+      <Modal
+        title={t("publishDialogTitle")}
+        open={Boolean(publication)}
+        onCancel={() => setPublication(null)}
+        width={460}
+        footer={
+          publication
+            ? [
+                <Button key="close" onClick={() => setPublication(null)}>
+                  {t("close")}
+                </Button>,
+                publication.dry_run && (
+                  <Button
+                    key="publish"
+                    type="primary"
+                    icon={<SendOutlined />}
+                    loading={publicationLoading}
+                    disabled={
+                      publication.eligible_count === 0 || !config?.github_token_configured
+                    }
+                    onClick={applyPublication}
+                  >
+                    {t("publishComments")} ({publication.eligible_count})
+                  </Button>
+                ),
+              ]
+            : null
+        }
+      >
+        {publication && (
+          <Space orientation="vertical" size={12} className="publication-content">
+            <Alert type="warning" showIcon title={t("publishWarning")} />
+            {!config?.github_token_configured && (
+              <Alert type="info" showIcon title={t("githubTokenMissing")} />
+            )}
+            <div className="publication-summary">
+              <Text type="secondary">{t("eligibleComments")}</Text>
+              <Text strong>{publication.eligible_count}</Text>
+              <Text type="secondary">{t("skippedFindings")}</Text>
+              <Text strong>{publication.skipped_count}</Text>
+            </div>
+            {publication.comments.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={t("noEligibleComments")}
+              />
+            ) : (
+              <div className="publication-list">
+                {publication.comments.map((comment) => (
+                  <div key={comment.fingerprint} className="publication-item">
+                    <Space wrap size={4}>
+                      <Tag color={comment.side === "LEFT" ? "magenta" : "blue"}>
+                        {comment.side === "LEFT" ? t("deletedSide") : t("addedSide")}
+                      </Tag>
+                      {!publication.dry_run && (
+                        <Tag>
+                          {comment.action === "create"
+                            ? t("created")
+                            : comment.action === "update"
+                              ? t("updated")
+                              : t("unchanged")}
+                        </Tag>
+                      )}
+                    </Space>
+                    <Text strong>{comment.title}</Text>
+                    <Text type="secondary" className="location">
+                      {comment.path}:{comment.line}
+                    </Text>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Space>
+        )}
       </Modal>
     </main>
   );

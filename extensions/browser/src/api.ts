@@ -1,4 +1,10 @@
-import type { ConfigStatus, ReviewJob, RunDetail, RunListItem } from "./types";
+import type {
+  ConfigStatus,
+  PublicationResult,
+  ReviewJob,
+  RunDetail,
+  RunListItem,
+} from "./types";
 
 export class LocalRunnerApi {
   constructor(
@@ -63,5 +69,12 @@ export class LocalRunnerApi {
 
   trace(traceId: string): Promise<Record<string, unknown>> {
     return this.request(`/api/traces/${traceId}`);
+  }
+
+  publish(runId: string, apply = false): Promise<PublicationResult> {
+    return this.request(`/api/runs/${runId}/publish`, {
+      method: "POST",
+      body: JSON.stringify({ apply }),
+    });
   }
 }

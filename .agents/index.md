@@ -29,3 +29,4 @@
 - [Edge 侧边栏扩展与安全配对](20260925T152602-edge-extension.md) - Manifest V3 Side Panel、安全配对、Runner EXE 重建和浏览器联调完成。
 - [Edge 扩展中英文界面](20260927T103156-edge-i18n.md) - 默认中文、English 切换、语言持久化及双语视觉验收完成。
 - [GitHub PR 评论发布后端](20260927T161437-github-comment-publisher.md) - dry-run、显式发布、head SHA 校验和幂等更新完成。
+- [Edge GitHub 评论预览](20260927T162556-edge-github-publish-preview.md) - 五条行级评论预览与无 Token 禁止发布验收完成。
