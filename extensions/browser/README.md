@@ -3,6 +3,7 @@
 ## 功能
 
 - 使用 Chromium Side Panel，不向 GitHub/GitLab 页面注入 DOM。
+- 默认使用中文，可在侧边栏顶部切换 English；语言选择会保存在浏览器本地存储中。
 - 自动读取当前活动标签页的 GitHub PR 或 GitLab MR URL。
 - 通过 8 位配对码连接本地 Runner。
 - 会话令牌只保存在 `chrome.storage.session`，浏览器重启后需要重新配对。

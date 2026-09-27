@@ -4,6 +4,7 @@ import {
   CodeOutlined,
   DisconnectOutlined,
   FileSearchOutlined,
+  GlobalOutlined,
   LinkOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
@@ -13,21 +14,31 @@ import {
   App as AntApp,
   Button,
   Card,
-  Descriptions,
+  ConfigProvider,
   Divider,
+  Dropdown,
   Empty,
   Form,
   Input,
   InputNumber,
-  List,
   Modal,
   Progress,
   Space,
   Tag,
   Typography,
 } from "antd";
+import enUS from "antd/locale/en_US";
+import zhCN from "antd/locale/zh_CN";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LocalRunnerApi } from "./api";
+import {
+  categoryLabel,
+  DEFAULT_LANGUAGE,
+  localizedError,
+  severityLabel,
+  translate,
+} from "./i18n";
+import type { Language, MessageKey } from "./i18n";
 import {
   activeTabUrl,
   loadLocal,
@@ -56,15 +67,49 @@ function changesUrl(value: string): string {
 }
 
 function App() {
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
+
+  useEffect(() => {
+    void loadLocal<Language>("language", DEFAULT_LANGUAGE).then((storedLanguage) => {
+      if (storedLanguage === "zh-CN" || storedLanguage === "en-US") {
+        setLanguage(storedLanguage);
+      }
+    });
+  }, []);
+
+  const changeLanguage = async (nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+    await saveLocal("language", nextLanguage);
+  };
+
   return (
-    <AntApp>
-      <SidePanel />
-    </AntApp>
+    <ConfigProvider
+      locale={language === "zh-CN" ? zhCN : enUS}
+      theme={{
+        token: {
+          colorPrimary: "#3157d5",
+          colorSuccess: "#168f70",
+          borderRadius: 10,
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif',
+        },
+      }}
+    >
+      <AntApp>
+        <SidePanel language={language} onLanguageChange={changeLanguage} />
+      </AntApp>
+    </ConfigProvider>
   );
 }
 
-function SidePanel() {
+interface SidePanelProps {
+  language: Language;
+  onLanguageChange: (language: Language) => Promise<void>;
+}
+
+function SidePanel({ language, onLanguageChange }: SidePanelProps) {
   const { message } = AntApp.useApp();
+  const t = useCallback((key: MessageKey) => translate(language, key), [language]);
   const [baseUrl, setBaseUrl] = useState(DEFAULT_RUNNER);
   const [token, setToken] = useState<string | null>(null);
   const [source, setSource] = useState("");
@@ -115,19 +160,19 @@ function SidePanel() {
         setJob(next);
         if (next.status === "completed") {
           window.clearInterval(timer);
-          message.success("评审完成");
+          message.success(t("reviewComplete"));
           await refresh();
         } else if (next.status === "failed") {
           window.clearInterval(timer);
-          message.error(next.error || "评审失败");
+          message.error(next.error || t("reviewFailed"));
         }
       } catch (error) {
         window.clearInterval(timer);
-        message.error((error as Error).message);
+        message.error(localizedError(language, error));
       }
     }, 900);
     return () => window.clearInterval(timer);
-  }, [api, job, message, refresh]);
+  }, [api, job, language, message, refresh, t]);
 
   const pair = async (values: { baseUrl: string; code: string }) => {
     const normalized = values.baseUrl.replace(/\/$/, "");
@@ -137,9 +182,9 @@ function SidePanel() {
       await saveSession("runnerSessionToken", result.session_token);
       setBaseUrl(normalized);
       setToken(result.session_token);
-      message.success("已连接本地 Runner");
+      message.success(t("connected"));
     } catch (error) {
-      message.error((error as Error).message);
+      message.error(localizedError(language, error));
     } finally {
       setPairing(false);
     }
@@ -157,19 +202,46 @@ function SidePanel() {
     try {
       const created = await api.createReview(values.source.trim(), values.budget);
       setJob(created);
-      message.success("评审任务已提交");
+      message.success(t("reviewSubmitted"));
     } catch (error) {
-      message.error((error as Error).message);
+      message.error(localizedError(language, error));
     }
   };
+
+  const languageMenu = {
+    selectable: true,
+    selectedKeys: [language],
+    items: [
+      { key: "zh-CN", label: t("chinese") },
+      { key: "en-US", label: t("english") },
+    ],
+    onClick: ({ key }: { key: string }) => {
+      void onLanguageChange(key as Language);
+    },
+  };
+
+  const languageButton = (
+    <Dropdown menu={languageMenu} trigger={["click"]} placement="bottomRight">
+      <Button
+        type="text"
+        icon={<GlobalOutlined />}
+        aria-label={t("switchLanguage")}
+        title={t("switchLanguage")}
+      >
+        {language === "zh-CN" ? "中" : "EN"}
+      </Button>
+    </Dropdown>
+  );
 
   if (!token) {
     return (
       <main className="panel-shell centered">
+        <div className="pair-language">{languageButton}</div>
         <div className="brand-mark"><CodeOutlined /></div>
-        <Title level={2}>连接本地 Review Agent</Title>
+        <Title level={2}>{t("pairTitle")}</Title>
         <Paragraph type="secondary">
-          先运行 <Text code>review-agent serve</Text>，再输入页面显示的 8 位配对码。
+          {t("pairBeforeCommand")} <Text code>review-agent serve</Text>
+          {t("pairAfterCommand")}
         </Paragraph>
         <Card className="pair-card" variant="borderless">
           <Form
@@ -180,10 +252,10 @@ function SidePanel() {
               void pair({ ...values, code: values.code.trim().toUpperCase() });
             }}
           >
-            <Form.Item name="baseUrl" label="Runner 地址" rules={[{ required: true }]}>
+            <Form.Item name="baseUrl" label={t("runnerAddress")} rules={[{ required: true }]}>
               <Input prefix={<ApiOutlined />} />
             </Form.Item>
-            <Form.Item name="code" label="配对码" rules={[{ required: true, len: 8 }]}>
+            <Form.Item name="code" label={t("pairingCode")} rules={[{ required: true, len: 8 }]}>
               <Input
                 autoComplete="off"
                 maxLength={8}
@@ -194,12 +266,12 @@ function SidePanel() {
               />
             </Form.Item>
             <Button type="primary" htmlType="submit" block loading={pairing}>
-              安全连接
+              {t("secureConnect")}
             </Button>
           </Form>
         </Card>
         <Text type="secondary" className="privacy-note">
-          <SafetyCertificateOutlined /> 令牌只保存在当前浏览器会话
+          <SafetyCertificateOutlined /> {t("sessionPrivacy")}
         </Text>
       </main>
     );
@@ -212,12 +284,25 @@ function SidePanel() {
           <div className="mini-mark"><CodeOutlined /></div>
           <div>
             <Text strong>Review Agent</Text>
-            <div className="subtitle">PR / MR 本地评审</div>
+            <div className="subtitle">{t("subtitle")}</div>
           </div>
         </div>
         <Space size={4}>
-          <Button type="text" icon={<ReloadOutlined />} onClick={() => refresh()} />
-          <Button type="text" icon={<DisconnectOutlined />} onClick={disconnect} />
+          {languageButton}
+          <Button
+            type="text"
+            icon={<ReloadOutlined />}
+            aria-label={t("refresh")}
+            title={t("refresh")}
+            onClick={() => refresh()}
+          />
+          <Button
+            type="text"
+            icon={<DisconnectOutlined />}
+            aria-label={t("disconnect")}
+            title={t("disconnect")}
+            onClick={disconnect}
+          />
         </Space>
       </header>
 
@@ -225,16 +310,20 @@ function SidePanel() {
         <Alert
           type="warning"
           showIcon
-          title="模型配置未完成"
-          description="请在本地 Runner 的 .env 中配置模型 API Key。"
+          title={t("modelIncomplete")}
+          description={t("modelIncompleteDescription")}
         />
       )}
 
       <Card className="review-card" variant="borderless">
         <div className="card-heading">
           <FileSearchOutlined />
-          <Text strong>当前评审</Text>
-          {config?.ready && <Tag color="success" icon={<CheckCircleFilled />}>就绪</Tag>}
+          <Text strong>{t("currentReview")}</Text>
+          {config?.ready && (
+            <Tag color="success" icon={<CheckCircleFilled />}>
+              {t("ready")}
+            </Tag>
+          )}
         </div>
         <Form
           layout="vertical"
@@ -243,11 +332,11 @@ function SidePanel() {
           onValuesChange={(_, values) => setSource(values.source)}
           onFinish={review}
         >
-          <Form.Item name="source" label="PR / MR 链接" rules={[{ required: true }]}>
+          <Form.Item name="source" label={t("sourceUrl")} rules={[{ required: true }]}>
             <Input.TextArea autoSize={{ minRows: 2, maxRows: 3 }} />
           </Form.Item>
           <div className="action-row">
-            <Form.Item name="budget" label="预算（CNY）">
+            <Form.Item name="budget" label={t("budget")}>
               <InputNumber min={0.01} precision={2} />
             </Form.Item>
             <Button
@@ -255,7 +344,7 @@ function SidePanel() {
               htmlType="submit"
               disabled={!config?.ready || !supportedReviewUrl(source)}
             >
-              开始评审
+              {t("startReview")}
             </Button>
           </div>
         </Form>
@@ -268,52 +357,66 @@ function SidePanel() {
         )}
         {supportedReviewUrl(source) && (
           <Button type="link" icon={<LinkOutlined />} onClick={() => openTab(changesUrl(source))}>
-            打开变更页面
+            {t("openChanges")}
           </Button>
         )}
       </Card>
 
       <div className="summary-line">
-        <Text type="secondary">模型</Text>
-        <Text strong>{config?.model || "未配置"}</Text>
-        <Text type="secondary">历史运行</Text>
+        <Text type="secondary">{t("model")}</Text>
+        <Text strong>{config?.model || t("notConfigured")}</Text>
+        <Text type="secondary">{t("runHistory")}</Text>
         <Text strong>{runs.length}</Text>
       </div>
 
-      <Divider titlePlacement="start">最近 Findings</Divider>
+      <Divider titlePlacement="start">{t("recentFindings")}</Divider>
       {!detail?.findings.length ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无评审结果" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noFindings")} />
       ) : (
-        <List
-          dataSource={detail.findings}
-          split={false}
-          renderItem={(finding: Finding) => (
-            <List.Item>
-              <Card className="finding-card" variant="borderless">
-                <Space wrap size={4}>
-                  <Tag color={finding.severity === "critical" ? "red" : finding.severity === "high" ? "volcano" : "gold"}>
-                    {finding.severity}
-                  </Tag>
-                  <Tag color={finding.side === "LEFT" ? "magenta" : "blue"}>
-                    {finding.side === "LEFT" ? "删除侧" : "新增侧"}
-                  </Tag>
-                  <Tag>{finding.category}</Tag>
-                </Space>
-                <Title level={5}>{finding.title}</Title>
-                <Text type="secondary" className="location">
-                  {finding.file_path}:{finding.side === "LEFT" ? finding.old_line : finding.new_line}
-                </Text>
-                <Paragraph ellipsis={{ rows: 3, expandable: true }}>{finding.explanation}</Paragraph>
-                <Button type="link" size="small" onClick={async () => setTrace(await api.trace(finding.trace_id))}>
-                  查看 Trace
-                </Button>
-              </Card>
-            </List.Item>
-          )}
-        />
+        <div className="findings-list">
+          {detail.findings.map((finding: Finding) => (
+            <Card key={finding.id} className="finding-card" variant="borderless">
+              <Space wrap size={4}>
+                <Tag
+                  color={
+                    finding.severity === "critical"
+                      ? "red"
+                      : finding.severity === "high"
+                        ? "volcano"
+                        : "gold"
+                  }
+                >
+                  {severityLabel(language, finding.severity)}
+                </Tag>
+                <Tag color={finding.side === "LEFT" ? "magenta" : "blue"}>
+                  {finding.side === "LEFT" ? t("deletedSide") : t("addedSide")}
+                </Tag>
+                <Tag>{categoryLabel(language, finding.category)}</Tag>
+              </Space>
+              <Title level={5}>{finding.title}</Title>
+              <Text type="secondary" className="location">
+                {finding.file_path}:{finding.side === "LEFT" ? finding.old_line : finding.new_line}
+              </Text>
+              <Paragraph ellipsis={{ rows: 3, expandable: true }}>{finding.explanation}</Paragraph>
+              <Button
+                type="link"
+                size="small"
+                onClick={async () => setTrace(await api.trace(finding.trace_id))}
+              >
+                {t("viewTrace")}
+              </Button>
+            </Card>
+          ))}
+        </div>
       )}
 
-      <Modal title="Trace" open={Boolean(trace)} footer={null} onCancel={() => setTrace(null)} width={420}>
+      <Modal
+        title={t("trace")}
+        open={Boolean(trace)}
+        footer={null}
+        onCancel={() => setTrace(null)}
+        width={420}
+      >
         <pre className="trace-view">{trace ? JSON.stringify(trace, null, 2) : ""}</pre>
       </Modal>
     </main>

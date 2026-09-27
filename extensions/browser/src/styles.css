@@ -9,11 +9,18 @@ body { margin: 0; min-width: 320px; background: #f4f6fb; }
 
 .panel-shell { min-height: 100vh; padding: 16px; }
 .panel-shell.centered {
+  position: relative;
   display: flex;
   align-items: center;
   flex-direction: column;
   justify-content: center;
   text-align: center;
+}
+
+.pair-language {
+  position: absolute;
+  top: 14px;
+  right: 14px;
 }
 
 .brand-mark, .mini-mark {
@@ -42,6 +49,7 @@ body { margin: 0; min-width: 320px; background: #f4f6fb; }
 .summary-line { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 16px 4px 4px; }
 
 .finding-card { width: 100%; }
+.findings-list { display: grid; gap: 12px; }
 .finding-card h5.ant-typography { margin: 10px 0 4px; }
 .finding-card .ant-typography { margin-bottom: 6px; }
 .location { display: block; margin-bottom: 8px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }

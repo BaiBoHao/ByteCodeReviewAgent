@@ -27,3 +27,4 @@
 - [Windows Runner sidecar](20260925T144751-runner-sidecar.md) - PyInstaller 隔离构建、36.1 MB EXE、实际 API 与内置页面烟雾测试通过。
 - [LEFT 虚拟文档与 Diff Editor](20260925T145312-left-diff-editor.md) - Run 脱敏上下文 API、VS Code 虚拟文档与 LEFT Diff Editor 完成，33 项测试通过。
 - [Edge 侧边栏扩展与安全配对](20260925T152602-edge-extension.md) - Manifest V3 Side Panel、安全配对、Runner EXE 重建和浏览器联调完成。
+- [Edge 扩展中英文界面](20260927T103156-edge-i18n.md) - 默认中文、English 切换、语言持久化及双语视觉验收完成。
