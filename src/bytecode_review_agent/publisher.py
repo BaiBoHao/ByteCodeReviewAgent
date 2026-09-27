@@ -305,6 +305,8 @@ class GitHubCommentPublisher:
     def _headers(self) -> dict[str, str]:
         headers = {
             "Accept": "application/vnd.github+json",
+            "Connection": "close",
+            "User-Agent": "ByteCodeReviewAgent/0.1.0",
             "X-GitHub-Api-Version": GITHUB_API_VERSION,
         }
         if self.settings.github_token:

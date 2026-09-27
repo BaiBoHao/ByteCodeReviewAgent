@@ -201,6 +201,8 @@ class GitHubCommentPublisherTests(unittest.TestCase):
                     request.headers["Authorization"],
                     "Bearer github-test-token",
                 )
+                self.assertEqual(request.headers["User-Agent"], "ByteCodeReviewAgent/0.1.0")
+                self.assertEqual(request.headers["Connection"], "close")
                 if request.method == "GET" and request.url.path.endswith("/pulls/7"):
                     return httpx.Response(200, json={"head": {"sha": "head-reviewed"}})
                 if request.method == "GET" and request.url.path.endswith("/pulls/7/comments"):

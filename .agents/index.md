@@ -2,7 +2,7 @@
 
 - Root: `E:\ByteCodeReviewAgent`
 - Main branch: `main`
-- Active implementation branch: `codex/edge-extension`
+- Active implementation branch: `codex/github-comment-publisher`
 
 # Reading Rules
 
@@ -31,3 +31,4 @@
 - [GitHub PR 评论发布后端](20260927T161437-github-comment-publisher.md) - dry-run、显式发布、head SHA 校验和幂等更新完成。
 - [Edge GitHub 评论预览](20260927T162556-edge-github-publish-preview.md) - 五条行级评论预览与无 Token 禁止发布验收完成。
 - [DeepSeek 真实模型与输出语言](20260927T165537-deepseek-live-smoke.md) - DeepSeek Flash 断点恢复、真实费用与中英文输出链路验证完成。
+- [GitHub 真实评论发布验收](20260927T235758-github-live-publish.md) - 最小权限 Token、四条真实评论与中断幂等恢复验证完成。
