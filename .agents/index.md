@@ -33,3 +33,4 @@
 - [DeepSeek 真实模型与输出语言](20260927T165537-deepseek-live-smoke.md) - DeepSeek Flash 断点恢复、真实费用与中英文输出链路验证完成。
 - [GitHub 真实评论发布验收](20260927T235758-github-live-publish.md) - 最小权限 Token、四条真实评论与中断幂等恢复验证完成。
 - [产品化 README 与交付说明](20260928T001801-delivery-readme.md) - 面向 HR 与工程师的中文产品说明、架构图和 AI 能力证明完成。
+- [README Prompt 原文附录](20260928T002711-readme-prompt.md) - 保持原 README 不变，在总结后追加完整项目管理 Prompt。
