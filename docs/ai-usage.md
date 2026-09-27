@@ -1,40 +1,67 @@
-# AI-assisted development record
+# AI 辅助开发记录
 
-This repository is intentionally designed to demonstrate more than a single LLM prompt. The
-development process used AI for requirement decomposition, architecture exploration, security
-review, implementation support, test generation, and debugging. Human judgment retained control
-of scope, trust boundaries, acceptance criteria, and final verification.
+## 核心观点
 
-## Decisions made during development
+本项目使用 AI 完成需求分析、架构讨论、实现、测试、调试和浏览器验收，但没有把工程控制权交给一次
+对话。范围、安全边界、账号权限、付费调用、真实评论发布和最终验收始终由人决定。
 
-- Selected a deterministic orchestration pipeline instead of an unbounded autonomous loop.
-- Chose Python for the first-stage backend because it minimises integration code while preserving
-  clear provider, model, storage, tool, and reporter boundaries.
-- Kept Markdown as the phase-one output because the assignment allows Markdown or direct platform
-  comments; inline publication adds a separate idempotency problem and is deferred.
-- Required configurable model prices instead of embedding values that can become stale.
-- Treated repository content as untrusted data and prohibited repository code execution.
-- Used evidence and line validation to constrain model-provided confidence.
+我重点建立了三项可复用的 AI 工程能力。
 
-## Repository evidence
+## 1. 索引化上下文管理
 
-- `docs/architecture.md` explains checkpoints, trace linkage, confidence policy, and extension
-  points.
-- `docs/threat-model.md` records implemented controls and residual risk rather than claiming that
-  prompt instructions alone provide security.
-- The test suite uses deterministic fake model responses to exercise budget exhaustion, transient
-  failures, malformed responses, resume behavior, secret redaction, and confidence downgrading.
-- Every accepted finding links back to stored prompt/response artifacts, tool observations, token
-  usage, cost, and the original diff hash.
+`.agents/index.md` 是唯一默认入口，只保存项目路径、当前分支和进展链接。每个关键阶段使用独立的
+时间戳文档记录背景、修改、测试、风险和下一步。
 
-## Suggested take-home submission package
+这种结构解决了两个问题：
 
-- Source repository and commit history
-- README plus architecture and threat-model documents
-- Passing test output
-- One short terminal recording showing review, trace inspection, forced failure, and resume
-- A sanitized example diff, generated report, and trace export produced with the configured model
-- This AI usage record, including which AI suggestions were accepted or rejected
+- 不需要每次把全部历史重新交给模型；
+- 旧结论不会混入当前任务，相关细节仍可按索引恢复。
 
-Raw assistant transcripts, API keys, private diffs, and provider credentials should not be part of
-the submission package.
+上下文管理的重点不是“让模型记住更多”，而是“让模型只读取当前决策需要的事实”。
+
+## 2. AI 参与下的版本管理
+
+需求被拆成后端 CLI、本地 Web、上下文增强、删除行、VS Code、Runner、Edge、GitHub 发布等节点。
+每个节点使用 `codex/` 分支，修改前检查工作区，提交前运行测试、构建和敏感信息扫描。
+
+AI 可以加速编码，但不能替代：
+
+- 分支与提交边界；
+- 对用户修改的保护；
+- 测试覆盖和回归检查；
+- Secret 扫描；
+- 发布前确认；
+- 真实平台验收。
+
+## 3. 跨会话协作
+
+项目跨越多个会话。每次结束时把需求变化、架构决策、文件、测试结果、失败原因和风险写入仓库，
+下一次会话从 `.agents/index.md` 恢复，而不是依赖聊天记忆。
+
+这使用户、AI 或新协作者都能基于同一份版本化事实继续工作，也让过程可以审计和移交。
+
+## AI 参与的具体工作
+
+- 把 Take-Home 题目拆成内核、可靠性、安全、上下文、前端和发布阶段；
+- 设计可恢复的 Chunk 编排与 Trace 数据模型；
+- 生成和补充单元、集成、浏览器测试；
+- 分析 DeepSeek 空内容问题并增加思考模式兼容；
+- 在 Edge 中完成真实配对、双语、评审与评论预览验收；
+- 在用户确认后创建最小权限 GitHub Token 并发布真实评论；
+- 发现真实网络部分失败后验证 fingerprint 幂等恢复。
+
+## 人工控制的关键决策
+
+- 不做公网多租户服务；
+- 不执行用户仓库代码；
+- 不默认发布评论，先 dry-run 再确认；
+- DeepSeek 和 GitHub Token 使用最小权限并留在本机；
+- 不把 JetBrains 和正式 Windows 安装器纳入本次最终范围；
+- 真实付费模型调用和真实 PR 评论都由用户明确授权。
+
+## 不进入交付物的内容
+
+- 原始聊天记录；
+- API Key、GitHub Token、Cookie 或验证码；
+- 私有 diff；
+- `.env`、`.review-agent/` 和浏览器调试数据。
