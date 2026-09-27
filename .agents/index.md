@@ -35,3 +35,4 @@
 - [产品化 README 与交付说明](20260928T001801-delivery-readme.md) - 面向 HR 与工程师的中文产品说明、架构图和 AI 能力证明完成。
 - [README Prompt 原文附录](20260928T002711-readme-prompt.md) - 保持原 README 不变，在总结后追加完整项目管理 Prompt。
 - [双仓库合并 main](20260928T003746-merge-main.md) - 主项目与测试仓库均快进到 main，测试 PR #1 已标记 merged。
+- [移除 README GitLab 流程](20260928T005147-remove-readme-gitlab-process.md) - 从 Prompt 附录精确删除自建 GitLab 流程段落。
